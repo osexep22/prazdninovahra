@@ -3,7 +3,9 @@
 namespace Database\Seeders;
 
 use App\Models\User;
+use App\Support\AnswerNormalizer;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Database\Seeder;
@@ -25,10 +27,11 @@ class DatabaseSeeder extends Seeder
                 'email' => null,
                 'role' => 'admin',
                 'status' => 'active',
-                'friend_code' => 'ADMIN001',
+                'friend_code' => 'A1D2M3',
                 'password' => Hash::make('admin123'),
                 'admin_contact_password' => Hash::make('admin-heslo'),
                 'admin_contact_code_hash' => Hash::make('admin-kod'),
+                'admin_contact_code_encrypted' => Crypt::encryptString('admin-kod'),
                 'colony_level' => 5,
                 'resources' => 500,
                 'prestige' => 0,
@@ -48,11 +51,12 @@ class DatabaseSeeder extends Seeder
                 'password' => Hash::make('heslo123'),
                 'admin_contact_password' => Hash::make('admin-heslo'),
                 'admin_contact_code_hash' => Hash::make('admin-kod'),
+                'admin_contact_code_encrypted' => Crypt::encryptString('admin-kod'),
                 'colony_level' => min(5, $index + 1),
                 'resources' => 120 + ($index * 30),
                 'prestige' => 1000 - ($index * 120),
                 'registration_source' => ['plakat_chotebor', 'facebook', 'instagram', 'skola', 'qr_test'][$index],
-                'friend_code' => 'HRAC000' . ($index + 1),
+                'friend_code' => ['H1R2A3', 'H2R3A4', 'H3R4A5', 'H4R5A6', 'H5R6A7'][$index],
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
@@ -112,8 +116,8 @@ class DatabaseSeeder extends Seeder
                 'location_id' => $locationId,
                 'type' => 'code',
                 'title' => 'Sifra lokace',
-                'body' => 'Zadej testovaci kod: ' . $slug,
-                'answer_hash' => Hash::make($slug),
+                'body' => 'Zadej správné heslo pro tuto stopu.',
+                'answer_hash' => Hash::make(AnswerNormalizer::normalize($slug)),
                 'required_for_completion' => true,
                 'reward_prestige' => 25,
                 'reward_resources' => 10,
@@ -122,7 +126,7 @@ class DatabaseSeeder extends Seeder
             ]);
             DB::table('task_hints')->insert([
                 'location_task_id' => $taskId,
-                'text' => 'V prototypu je kod stejny jako slug lokace: ' . $slug,
+                'text' => 'Všímej si názvů míst, směru cesty a drobných nápisů kolem sebe.',
                 'cost_resources' => 5,
                 'sort_order' => 1,
                 'created_at' => now(),
@@ -143,21 +147,21 @@ class DatabaseSeeder extends Seeder
         }
 
         $buildings = [
-            ['malirska-komora', 'Malířská komora', 'Barvy, vlajky a vzory celé kolonie.', 1, 35],
-            ['sin-prestige', 'Síň prestiže', 'Místo pro slavné činy a odznaky.', 1, 45],
-            ['tunelarska-komora', 'Tunelářská komora', 'Zrychluje cestu hlouběji do palouku.', 2, 55],
-            ['archiv', 'Archiv', 'Ukládá staré příběhy a nápovědy.', 2, 60],
-            ['sklad', 'Sklad', 'Zásobárna materiálu a budoucích plánů.', 3, 70],
+            ['obyvak', 'Obývák', 'Útulná místnost pro odpočinek celé výpravy.', 1, 35, '/assets/game/rooms/obyvak.svg'],
+            ['kuchyn', 'Kuchyň', 'Místo, kde se třídí dobroty, semínka a lesní zásoby.', 1, 45, '/assets/game/rooms/kuchar.svg'],
+            ['hudebna', 'Hudebna', 'Komůrka pro zpěv, rytmus a večerní oslavy.', 2, 55, '/assets/game/rooms/muzikant.svg'],
+            ['telocvicna', 'Tělocvična', 'Prostor na trénink síly, skoků a mravenčí obratnosti.', 2, 60, '/assets/game/rooms/sportovec.svg'],
+            ['sklad', 'Sklad', 'Zásobárna materiálu a budoucích plánů.', 3, 70, '/assets/placeholders/building-sklad.svg'],
         ];
 
-        foreach ($buildings as $i => [$slug, $name, $description, $level, $cost]) {
+        foreach ($buildings as $i => [$slug, $name, $description, $level, $cost, $assetPath]) {
             $buildingId = DB::table('buildings')->insertGetId([
                 'slug' => $slug,
                 'name' => $name,
                 'description' => $description,
                 'min_colony_level' => $level,
                 'cost_resources' => $cost,
-                'svg_asset_path' => '/assets/placeholders/building-' . $slug . '.svg',
+                'svg_asset_path' => $assetPath,
                 'layout_x' => 10 + ($i * 16),
                 'layout_y' => 16 + ($i % 2) * 22,
                 'created_at' => now(),
@@ -178,7 +182,7 @@ class DatabaseSeeder extends Seeder
                     'building_id' => $buildingId,
                     'title' => 'Speciální úkol ' . ($u + 1),
                     'body' => 'Zadej kód ' . $slug . '-' . ($u + 1) . ' a odemkni úpravu.',
-                    'answer_hash' => Hash::make($slug . '-' . ($u + 1)),
+                    'answer_hash' => Hash::make(AnswerNormalizer::normalize($slug . '-' . ($u + 1))),
                     'reward_prestige' => 45,
                     'reward_resources' => 12,
                     'unlock_key' => $key,
@@ -197,7 +201,7 @@ class DatabaseSeeder extends Seeder
             DB::table('badges')->insert([
                 'slug' => $slug,
                 'name' => $name,
-                'description' => 'Testovací odznáček pro prototyp.',
+                'description' => 'Odznáček za důležitý krok ve výpravě.',
                 'icon_path' => $icon,
                 'prestige_bonus' => $bonus,
                 'created_at' => now(),
@@ -206,8 +210,8 @@ class DatabaseSeeder extends Seeder
         }
 
         DB::table('announcements')->insert([
-            'title' => 'Vítej v první verzi hry',
-            'body' => 'Tohle je pracovní prototyp. Grafika je zatím placeholder a mechaniky jsou připravené k testování.',
+            'title' => 'Vítej v Prázdninové hře',
+            'body' => 'Palouk se probouzí a mravenčí výprava čeká na první odvážné luštitele.',
             'priority' => 'normal',
             'active_from' => now()->subDay(),
             'is_active' => true,

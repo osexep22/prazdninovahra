@@ -28,12 +28,19 @@
         <input name="title" value="{{ $intro->title ?? 'Jak to celé začalo' }}" required>
         <label>Text před obrázkem</label>
         <textarea name="body_top" rows="5">{{ $intro->body_top ?? '' }}</textarea>
-        <label>Nahrát nový obrázek mezi texty</label>
+        <label>Nahrát první obrázek mezi texty</label>
         <input name="image" type="file" accept="image/png,image/jpeg,image/webp">
-        <label>Vybrat uložený obrázek mezi texty</label>
+        <label>Vybrat první uložený obrázek</label>
         <select name="existing_image_path"><option value="">Ponechat aktuální</option>@foreach($imageFiles as $file)<option value="{{ $file->public_path }}">{{ $file->original_name }} - {{ $file->public_path }}</option>@endforeach</select>
         @if($intro?->image_path)<p class="small">Aktuální: {{ $intro->image_path }}</p>@endif
-        <label>Text po obrázku</label>
+        <label>Text mezi obrázky</label>
+        <textarea name="body_middle" rows="5">{{ $intro->body_middle ?? '' }}</textarea>
+        <label>Nahrát druhý obrázek mezi texty</label>
+        <input name="image_2" type="file" accept="image/png,image/jpeg,image/webp">
+        <label>Vybrat druhý uložený obrázek</label>
+        <select name="existing_image_path_2"><option value="">Ponechat aktuální</option>@foreach($imageFiles as $file)<option value="{{ $file->public_path }}">{{ $file->original_name }} - {{ $file->public_path }}</option>@endforeach</select>
+        @if(($intro->image_path_2 ?? null))<p class="small">Aktuální: {{ $intro->image_path_2 }}</p>@endif
+        <label>Text po druhém obrázku</label>
         <textarea name="body_bottom" rows="5">{{ $intro->body_bottom ?? '' }}</textarea>
         <p><button class="primary">Uložit úvodní příběh</button></p>
     </form>
@@ -48,6 +55,7 @@
             <div class="grid">
                 <div><label>Název</label><input name="name" value="{{ $location->name }}" required></div>
                 <div><label>Popis odemčené lokace</label><input name="tooltip" value="{{ $location->tooltip ?? '' }}"></div>
+                <div><label>Popis po splnění lokace</label><input name="tooltip_completed" value="{{ $location->tooltip_completed ?? '' }}"></div>
                 <div><label>X na mapě</label><input name="map_x" type="number" min="0" max="100" value="{{ $location->map_x }}" required></div>
                 <div><label>Y na mapě</label><input name="map_y" type="number" min="0" max="100" value="{{ $location->map_y }}" required></div>
                 <div><label>Pořadí</label><input name="sort_order" type="number" min="1" value="{{ $location->sort_order ?? $location->id }}" required></div>
@@ -59,6 +67,8 @@
             <textarea name="description" rows="3" required>{{ $location->description }}</textarea>
             <label>Příběh lokace</label>
             <textarea name="story" rows="5">{{ $location->story }}</textarea>
+            <label>Příběh po úspěšném splnění</label>
+            <textarea name="story_completed" rows="5">{{ $location->story_completed ?? '' }}</textarea>
             <div class="grid">
                 <div><label>Nahrát nové PNG stanoviště</label><input name="image" type="file" accept="image/png,image/jpeg,image/webp"><label>Vybrat uložený obrázek stanoviště</label><select name="existing_image_path"><option value="">Ponechat aktuální</option>@foreach($imageFiles as $file)<option value="{{ $file->public_path }}">{{ $file->original_name }}</option>@endforeach</select><p class="small">{{ $location->image_path }}</p></div>
                 <div><label>Nahrát nový obrázek v detailu</label><input name="story_image" type="file" accept="image/png,image/jpeg,image/webp"><label>Vybrat uložený obrázek v detailu</label><select name="existing_story_image_path"><option value="">Ponechat aktuální</option>@foreach($imageFiles as $file)<option value="{{ $file->public_path }}">{{ $file->original_name }}</option>@endforeach</select><p class="small">{{ $location->story_image_path }}</p></div>

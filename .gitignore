@@ -20,6 +20,8 @@
 /storage/*.key
 /storage/pail
 /vendor
+local-router.php
+php-local.ini
 Homestead.json
 Homestead.yaml
 Thumbs.db

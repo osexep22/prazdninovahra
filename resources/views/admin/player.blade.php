@@ -4,23 +4,36 @@
 <p class="row">
     <form method="post" action="/admin/hraci/{{ $player->id }}/impersonate" class="inline">@csrf<button class="primary">Zobrazit jako hráč</button></form>
 </p>
-<div class="panel">
-    <form method="post" action="/admin/hraci/{{ $player->id }}">@csrf
-        <label>Stav<select name="status">
-            <option value="pending_approval" @selected($player->status==='pending_approval')>Čeká na schválení</option>
-            <option value="active" @selected($player->status==='active')>Schválený</option>
-            <option value="blocked" @selected($player->status==='blocked')>Zablokovaný</option>
-        </select></label>
-        <label>Role<select name="role">
-            <option value="player" @selected($player->role==='player')>Hráč</option>
-            <option value="admin" @selected($player->role==='admin')>Admin</option>
-        </select></label>
-        <p><button class="primary">Uložit status a roli</button></p>
-    </form>
+<div class="grid">
+    <div class="panel">
+        <h2>Ověření hráče</h2>
+        <p class="small">Kód pro komunikaci s adminy slouží k rychlému ověření, že mluvíme se správným hráčem.</p>
+        <div class="stat">
+            @if($player->admin_contact_code_plain)
+                <b><code>{{ $player->admin_contact_code_plain }}</code></b>
+            @else
+                <span class="muted">Kód není dostupný u staršího účtu. Nově registrovaní hráči ho už budou mít uložený.</span>
+            @endif
+        </div>
+    </div>
+    <div class="panel">
+        <form method="post" action="/admin/hraci/{{ $player->id }}">@csrf
+            <label>Stav<select name="status">
+                <option value="pending_approval" @selected($player->status==='pending_approval')>Čeká na schválení</option>
+                <option value="active" @selected($player->status==='active')>Schválený</option>
+                <option value="blocked" @selected($player->status==='blocked')>Zablokovaný</option>
+            </select></label>
+            <label>Role<select name="role">
+                <option value="player" @selected($player->role==='player')>Hráč</option>
+                <option value="admin" @selected($player->role==='admin')>Admin</option>
+            </select></label>
+            <p><button class="primary">Uložit status a roli</button></p>
+        </form>
+    </div>
 </div>
 <div class="panel" style="margin-top:12px">
     <h2>Ruční úprava hodnot</h2>
-    <p class="flash err">Pozor: ruční změna prestiže nebo surovin ovlivní hru a audit log. Level se tady záměrně nemění.</p>
+    <p class="flash err">Pozor: ruční změna prestiže nebo surovin ovlivní hru a audit log. Úroveň se tady záměrně nemění.</p>
     <form method="post" action="/admin/hraci/{{ $player->id }}/adjust">@csrf
         <div class="grid">
             <label>Prestiž<input name="prestige" type="number" value="{{ $player->prestige }}"></label>

@@ -10,7 +10,7 @@
             <p class="muted">Nahlížíš na mraveniště přítele. Je jen pro čtení.</p>
         @endif
     </div>
-    <div class="anthill-board">
+    <div class="anthill-board" style="--anthill-variant:url('{{ $anthillVariant }}')">
     <div class="anthill-map">
     @foreach($slots as $slot)
         @php

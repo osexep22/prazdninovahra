@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\AnswerNormalizer;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
@@ -48,7 +50,14 @@ class AdminController extends Controller
             });
         }
 
-        return view('admin.players', ['players' => $query->paginate(30)]);
+        $players = $query->paginate(30);
+        $players->getCollection()->transform(function ($player) {
+            $player->admin_contact_code_plain = $this->decryptAdminContactCode($player->admin_contact_code_encrypted ?? null);
+
+            return $player;
+        });
+
+        return view('admin.players', ['players' => $players]);
     }
 
     public function player(int $id): View
@@ -56,6 +65,7 @@ class AdminController extends Controller
         $this->guardAdmin();
         $player = DB::table('users')->find($id);
         abort_unless($player, 404);
+        $player->admin_contact_code_plain = $this->decryptAdminContactCode($player->admin_contact_code_encrypted ?? null);
 
         return view('admin.player', [
             'player' => $player,
@@ -72,6 +82,19 @@ class AdminController extends Controller
                 ->get(),
             'allBadges' => DB::table('badges')->get(),
         ]);
+    }
+
+    private function decryptAdminContactCode(?string $encrypted): ?string
+    {
+        if (! $encrypted) {
+            return null;
+        }
+
+        try {
+            return Crypt::decryptString($encrypted);
+        } catch (\Throwable) {
+            return null;
+        }
     }
 
     public function updatePlayer(Request $request, int $id): RedirectResponse
@@ -192,16 +215,75 @@ class AdminController extends Controller
         $this->guardAdmin();
         $messages = DB::table('messages')->join('users', 'users.id', '=', 'messages.user_id')
             ->where('messages.thread_type', 'admin')
-            ->select('messages.*', 'users.display_name')->latest('messages.created_at')->get();
+            ->select('messages.*', 'users.display_name')->latest('messages.updated_at')->get();
 
         return view('admin.messages', [
             'messages' => $messages,
+            'players' => DB::table('users')
+                ->where('role', 'player')
+                ->orderBy('display_name')
+                ->select('id', 'display_name', 'username', 'status')
+                ->get(),
             'entries' => DB::table('message_entries')
                 ->whereIn('message_id', $messages->pluck('id'))
                 ->orderBy('created_at')
                 ->get()
                 ->groupBy('message_id'),
         ]);
+    }
+
+    public function startAdminMessage(Request $request): RedirectResponse
+    {
+        $this->guardAdmin();
+        $data = $request->validate([
+            'player_id' => ['required', 'integer', 'exists:users,id'],
+            'body' => ['required', 'string', 'max:4000'],
+        ], [], [
+            'player_id' => 'hráč',
+            'body' => 'zpráva',
+        ]);
+
+        $player = DB::table('users')->where('id', $data['player_id'])->where('role', 'player')->first();
+        abort_unless($player, 404);
+
+        $message = DB::table('messages')
+            ->where('user_id', $player->id)
+            ->whereNull('recipient_user_id')
+            ->where('thread_type', 'admin')
+            ->first();
+
+        $messageId = $message?->id ?? DB::table('messages')->insertGetId([
+            'user_id' => $player->id,
+            'recipient_user_id' => null,
+            'thread_type' => 'admin',
+            'subject' => 'Admini',
+            'body' => '',
+            'status' => 'answered',
+            'admin_user_id' => Auth::id(),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        DB::table('message_entries')->insert([
+            'message_id' => $messageId,
+            'user_id' => Auth::id(),
+            'sender_role' => 'admin',
+            'body' => $data['body'],
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        DB::table('messages')->where('id', $messageId)->update([
+            'body' => $data['body'],
+            'admin_reply' => $data['body'],
+            'admin_user_id' => Auth::id(),
+            'answered_at' => now(),
+            'status' => 'answered',
+            'updated_at' => now(),
+        ]);
+        $this->audit('admin_message_started', 'message', $messageId, $player->id);
+
+        return redirect('/admin/zpravy')->with('success', 'Administrátorská zpráva byla odeslána hráči ' . $player->display_name . '.');
     }
 
     public function answerMessage(Request $request, int $id): RedirectResponse
@@ -316,17 +398,22 @@ class AdminController extends Controller
         $data = $request->validate([
             'title' => ['required', 'string', 'max:160'],
             'body_top' => ['nullable', 'string'],
+            'body_middle' => ['nullable', 'string'],
             'body_bottom' => ['nullable', 'string'],
             'image' => ['nullable', 'file', 'mimes:png,jpg,jpeg,webp', 'max:5120'],
+            'image_2' => ['nullable', 'file', 'mimes:png,jpg,jpeg,webp', 'max:5120'],
             'existing_image_path' => ['nullable', 'string', 'max:255'],
+            'existing_image_path_2' => ['nullable', 'string', 'max:255'],
         ]);
 
         $current = DB::table('game_contents')->where('key', $key)->first();
         $payload = [
             'title' => $data['title'],
             'body_top' => $data['body_top'] ?? null,
+            'body_middle' => $data['body_middle'] ?? null,
             'body_bottom' => $data['body_bottom'] ?? null,
             'image_path' => $this->chosenFilePath($data['existing_image_path'] ?? null, $this->uploadPublicFile($request, 'image', 'uploads/story')) ?: ($current->image_path ?? null),
+            'image_path_2' => $this->chosenFilePath($data['existing_image_path_2'] ?? null, $this->uploadPublicFile($request, 'image_2', 'uploads/story')) ?: ($current->image_path_2 ?? null),
             'updated_at' => now(),
         ];
 
@@ -346,7 +433,9 @@ class AdminController extends Controller
             'name' => ['required', 'string', 'max:120'],
             'description' => ['required', 'string'],
             'story' => ['nullable', 'string'],
+            'story_completed' => ['nullable', 'string'],
             'tooltip' => ['nullable', 'string', 'max:180'],
+            'tooltip_completed' => ['nullable', 'string', 'max:180'],
             'map_x' => ['required', 'integer', 'min:0', 'max:100'],
             'map_y' => ['required', 'integer', 'min:0', 'max:100'],
             'sort_order' => ['required', 'integer', 'min:1', 'max:999'],
@@ -365,7 +454,9 @@ class AdminController extends Controller
             'name' => $data['name'],
             'description' => $data['description'],
             'story' => $data['story'] ?? null,
+            'story_completed' => $data['story_completed'] ?? null,
             'tooltip' => $data['tooltip'] ?? null,
+            'tooltip_completed' => $data['tooltip_completed'] ?? null,
             'map_x' => $data['map_x'],
             'map_y' => $data['map_y'],
             'sort_order' => $data['sort_order'],
@@ -411,7 +502,7 @@ class AdminController extends Controller
             'updated_at' => now(),
         ];
         if (($data['answer'] ?? '') !== '') {
-            $payload['answer_hash'] = Hash::make(trim($data['answer']));
+            $payload['answer_hash'] = Hash::make(AnswerNormalizer::normalize($data['answer']));
         }
 
         DB::table('location_tasks')->where('id', $id)->update($payload);
@@ -446,7 +537,7 @@ class AdminController extends Controller
             'updated_at' => now(),
         ];
         if (($data['answer'] ?? '') !== '') {
-            $payload['answer_hash'] = Hash::make(trim($data['answer']));
+            $payload['answer_hash'] = Hash::make(AnswerNormalizer::normalize($data['answer']));
         }
 
         DB::table('building_tasks')->where('id', $id)->update($payload);

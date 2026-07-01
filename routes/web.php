@@ -12,6 +12,7 @@ Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
     Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:10,1');
     Route::get('/register', [AuthController::class, 'showRegister']);
+    Route::get('/register/check-name', [AuthController::class, 'checkName'])->middleware('throttle:30,1');
     Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:5,1');
 });
 
@@ -51,6 +52,7 @@ Route::middleware('auth')->group(function () {
         Route::delete('/hraci/{id}', [AdminController::class, 'deletePlayer']);
         Route::post('/hraci/{id}/badges', [AdminController::class, 'addBadge']);
         Route::get('/zpravy', [AdminController::class, 'messages']);
+        Route::post('/zpravy', [AdminController::class, 'startAdminMessage']);
         Route::post('/zpravy/{id}', [AdminController::class, 'answerMessage']);
         Route::get('/novinky', [AdminController::class, 'announcements']);
         Route::post('/novinky', [AdminController::class, 'storeAnnouncement']);

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\AnswerNormalizer;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -62,7 +63,7 @@ class GameController extends Controller
         $state = $states[$location->id]->state ?? 'locked';
 
         if ($state === 'locked') {
-            return redirect('/palouk')->with('error', 'Lokace je zatím zamčená.');
+            return redirect('/palouk')->with('error', 'Lokace je zatĂ­m zamÄŤenĂˇ.');
         }
 
         $tasks = DB::table('location_tasks')->where('location_id', $location->id)->orderBy('sort_order')->get();
@@ -83,7 +84,7 @@ class GameController extends Controller
         $status = $task->type === 'info' ? 'completed' : 'pending';
 
         if ($task->type === 'code') {
-            $status = Hash::check(trim($data['answer'] ?? ''), $task->answer_hash) ? 'completed' : 'pending';
+            $status = Hash::check(AnswerNormalizer::normalize($data['answer'] ?? ''), $task->answer_hash) ? 'completed' : 'pending';
         }
 
         DB::table('user_task_progress')->updateOrInsert(
@@ -99,8 +100,8 @@ class GameController extends Controller
 
         if ($status === 'completed') {
             $this->rewardUser($task->reward_prestige, $task->reward_resources, 0, 'task_completed', 'location_task', $task->id);
-            $this->syncLocationCompletion($task->location_id);
-            return back()->with('success', 'Úkol splněn.');
+            $storyMessage = $this->syncLocationCompletion($task->location_id);
+            return back()->with('success', $storyMessage ?: 'Úkol splněn.');
         }
 
         return back()->with('error', $task->type === 'manual' ? 'Odesláno adminovi ke kontrole.' : 'Kód zatím nesedí.');
@@ -119,7 +120,7 @@ class GameController extends Controller
 
         $user = Auth::user();
         if ($user->resources < $hint->cost_resources) {
-            return back()->with('error', 'Nemáš dost surovin.');
+            return back()->with('error', 'NemĂˇĹˇ dost surovin.');
         }
 
         DB::transaction(function () use ($hint, $user) {
@@ -133,7 +134,7 @@ class GameController extends Controller
             $this->audit('hint_purchased', 'task_hint', $hint->id, $user->id);
         });
 
-        return back()->with('success', 'Nápověda koupena.');
+        return back()->with('success', 'NĂˇpovÄ›da koupena.');
     }
 
     public function anthill(): View
@@ -165,8 +166,15 @@ class GameController extends Controller
             ->keyBy('building_slot_id');
         $buildings = DB::table('buildings')->orderBy('min_colony_level')->get();
         $ownedBuildingIds = DB::table('user_buildings')->where('user_id', $userId)->pluck('building_id')->all();
+        $builtRooms = count($ownedBuildingIds);
+        $anthillVariant = match (true) {
+            $builtRooms >= 8 => '/assets/game/anthill/anthill-10-rooms.png',
+            $builtRooms >= 6 => '/assets/game/anthill/anthill-7-rooms.png',
+            $builtRooms >= 4 => '/assets/game/anthill/anthill-5-rooms.png',
+            default => '/assets/game/anthill/anthill-3-rooms.png',
+        };
 
-        return view('game.anthill', compact('slots', 'ownedSlots', 'placed', 'buildings', 'ownedBuildingIds', 'readonly', 'owner'));
+        return view('game.anthill', compact('slots', 'ownedSlots', 'placed', 'buildings', 'ownedBuildingIds', 'readonly', 'owner', 'anthillVariant'));
     }
 
     public function buySlot(int $slotId): RedirectResponse
@@ -177,13 +185,13 @@ class GameController extends Controller
         $user = Auth::user();
 
         if ($slot->required_colony_level > $user->colony_level) {
-            return back()->with('error', 'Kolonie ještě nemá potřebný level.');
+            return back()->with('error', 'Kolonie jeĹˇtÄ› nemĂˇ potĹ™ebnĂ˝ level.');
         }
         if (DB::table('user_building_slots')->where(['user_id' => $user->id, 'building_slot_id' => $slotId])->exists()) {
             return back();
         }
         if ($user->resources < $slot->cost_resources) {
-            return back()->with('error', 'Nemáš dost surovin.');
+            return back()->with('error', 'NemĂˇĹˇ dost surovin.');
         }
 
         DB::transaction(function () use ($slot, $user) {
@@ -212,16 +220,16 @@ class GameController extends Controller
         abort_unless($building, 404);
 
         if ($building->min_colony_level > $user->colony_level || $user->resources < $building->cost_resources) {
-            return back()->with('error', 'Budovu zatím nejde postavit.');
+            return back()->with('error', 'Budovu zatĂ­m nejde postavit.');
         }
         if (DB::table('user_buildings')->where(['user_id' => $user->id, 'building_id' => $building->id])->exists()) {
-            return back()->with('error', 'Každý typ budovy lze postavit jen jednou.');
+            return back()->with('error', 'KaĹľdĂ˝ typ budovy lze postavit jen jednou.');
         }
         if (! DB::table('user_building_slots')->where(['user_id' => $user->id, 'building_slot_id' => $data['slot_id']])->exists()) {
-            return back()->with('error', 'Slot není koupený.');
+            return back()->with('error', 'Slot nenĂ­ koupenĂ˝.');
         }
         if (DB::table('user_buildings')->where(['user_id' => $user->id, 'building_slot_id' => $data['slot_id']])->exists()) {
-            return back()->with('error', 'Slot je obsazený.');
+            return back()->with('error', 'Slot je obsazenĂ˝.');
         }
 
         DB::transaction(function () use ($user, $building, $data) {
@@ -270,8 +278,8 @@ class GameController extends Controller
         abort_unless(DB::table('user_buildings')->where(['user_id' => Auth::id(), 'building_id' => $task->building_id])->exists(), 403);
         $data = $request->validate(['answer' => ['required', 'string', 'max:2000']]);
 
-        if (! Hash::check(trim($data['answer']), $task->answer_hash)) {
-            return back()->with('error', 'Kód zatím nesedí.');
+        if (! Hash::check(AnswerNormalizer::normalize($data['answer']), $task->answer_hash)) {
+            return back()->with('error', 'KĂłd zatĂ­m nesedĂ­.');
         }
 
         DB::transaction(function () use ($task, $data) {
@@ -298,7 +306,7 @@ class GameController extends Controller
             $this->awardBadge('vsechny-ukoly-budovy', Auth::id(), 'building', $task->building_id);
         }
 
-        return back()->with('success', 'Speciální úkol splněn.');
+        return back()->with('success', 'SpeciĂˇlnĂ­ Ăşkol splnÄ›n.');
     }
 
     public function saveCustomization(Request $request, int $buildingId): RedirectResponse
@@ -312,7 +320,7 @@ class GameController extends Controller
             ->where('created_at', '>=', now()->startOfDay())
             ->count();
         if ($changesToday >= 3) {
-            return back()->with('error', 'Vzhled lze měnit maximálně 3x denně.');
+            return back()->with('error', 'Vzhled lze mÄ›nit maximĂˇlnÄ› 3x dennÄ›.');
         }
 
         $data = $request->validate([
@@ -328,7 +336,7 @@ class GameController extends Controller
         DB::table('users')->where('id', $user->id)->update(['last_customization_change_at' => now()]);
         $this->audit('customization_changed', 'building', $buildingId, $user->id);
 
-        return back()->with('success', 'Vzhled uložen.');
+        return back()->with('success', 'Vzhled uloĹľen.');
     }
 
     public function leaderboard(): View
@@ -471,8 +479,11 @@ class GameController extends Controller
 
     public function addFriend(Request $request): RedirectResponse
     {
-        $data = $request->validate(['friend_code' => ['required', 'string', 'max:20']]);
-        $friend = DB::table('users')->where('friend_code', strtoupper(trim($data['friend_code'])))->first();
+        $data = $request->validate(['friend_code' => ['required', 'string', 'regex:/^[A-Za-z][0-9][A-Za-z][0-9][A-Za-z][0-9]$/']], [
+            'friend_code.regex' => 'Kód přítele má tvar například A4P8K2.',
+        ]);
+        $friendCode = strtoupper(trim($data['friend_code']));
+        $friend = DB::table('users')->where('friend_code', $friendCode)->first();
 
         if (! $friend) {
             return back()->with('error', 'Takový kód jsem nenašel.');
@@ -519,7 +530,7 @@ class GameController extends Controller
         return $state && $state->state !== 'locked';
     }
 
-    private function syncLocationCompletion(int $locationId): void
+    private function syncLocationCompletion(int $locationId): ?string
     {
         $requiredTaskIds = DB::table('location_tasks')->where(['location_id' => $locationId, 'required_for_completion' => true])->pluck('id');
         $done = DB::table('user_task_progress')->where('user_id', Auth::id())->whereIn('location_task_id', $requiredTaskIds)->where('status', 'completed')->count();
@@ -538,10 +549,23 @@ class GameController extends Controller
                 if ($completedCount <= 10) {
                     $this->awardBadge('top-10-' . $location->slug, Auth::id(), 'location', $locationId);
                 }
+
+                if (filled($location->story_completed ?? null)) {
+                    session()->flash('completion_story', [
+                        'title' => $location->name . ' je splněno',
+                        'image' => $location->story_image_path ?: $location->image_path,
+                        'body' => $location->story_completed,
+                    ]);
+                }
+
+                if ($location->slug === 'ukol-2') {
+                    return 'Mravenečci si konečně postavili první opravdový domov. Od téhle chvíle můžeš navštívit své Mraveniště a začít stavět nové místnosti.';
+                }
             }
         }
-    }
 
+        return null;
+    }
     private function rewardUser(int $prestige, int $resources, int $level, string $action, string $entityType, int $entityId): void
     {
         DB::table('users')->where('id', Auth::id())->increment('prestige', $prestige);
@@ -666,7 +690,7 @@ class GameController extends Controller
     private function ensureAnthillUnlocked(): void
     {
         if (! $this->anthillUnlocked(Auth::id())) {
-            abort(403, 'Zatím ještě nemáš vlastní mraveniště. Společně s ostatními mravenci zatím přespáváte na louce pod hvězdami.');
+            abort(403, 'ZatĂ­m jeĹˇtÄ› nemĂˇĹˇ vlastnĂ­ mraveniĹˇtÄ›. SpoleÄŤnÄ› s ostatnĂ­mi mravenci zatĂ­m pĹ™espĂˇvĂˇte na louce pod hvÄ›zdami.');
         }
     }
 
@@ -707,3 +731,7 @@ class GameController extends Controller
             ->first();
     }
 }
+
+
+
+

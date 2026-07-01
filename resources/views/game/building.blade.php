@@ -4,12 +4,16 @@
     <h1>{{ $building->name }}</h1>
     <div id="svg-preview" data-src="{{ $building->svg_asset_path }}" style="max-width:360px;width:100%"></div>
     <p>
-        @if($completed === 0) Komora se teprve probouzi.
-        @elseif($completed < $tasks->count()) Komůrka už má první vylepšení a čeká na další práci.
-        @else Komora je ve sve prvni prototypove sile.
+        @if($completed === 0)
+            Komůrka se teprve probouzí.
+        @elseif($completed < $tasks->count())
+            Komůrka už má první vylepšení a čeká na další práci.
+        @else
+            Komůrka je hotová a připravená sloužit celé kolonii.
         @endif
     </p>
 </div>
+
 <h2>Speciální úkoly</h2>
 @foreach($tasks as $task)
     <div class="card" style="margin-top:12px">
@@ -19,11 +23,17 @@
             <p><a class="btn" href="{{ $task->pdf_path }}" download>Stáhnout PDF k podúkolu</a></p>
         @endif
         @if(($progress[$task->id] ?? '') !== 'completed')
-            <form method="post" action="/building-tasks/{{ $task->id }}">@csrf<label>Kód</label><input name="answer"><p><button class="primary">Odeslat</button></p></form>
+            <form method="post" action="/building-tasks/{{ $task->id }}">
+                @csrf
+                <label>Kód</label>
+                <input name="answer">
+                <p><button class="primary">Odeslat</button></p>
+            </form>
         @endif
     </div>
 @endforeach
-<h2>Upravy vzhledu</h2>
+
+<h2>Úpravy vzhledu</h2>
 <div class="panel">
     <form method="post" action="/buildings/{{ $building->id }}/customization">
         @csrf
@@ -34,7 +44,9 @@
                     <input class="custom-control" data-kind="color" data-key="{{ $unlock->key }}" type="color" name="colors[{{ $unlock->key }}]" value="#b93535">
                 @elseif($unlock->type === 'variant')
                     <select class="custom-control" data-kind="variant" data-key="{{ $unlock->key }}" name="variants[{{ $unlock->key }}]">
-                        @foreach(json_decode($unlock->options, true) ?? [] as $option)<option>{{ $option }}</option>@endforeach
+                        @foreach(json_decode($unlock->options, true) ?? [] as $option)
+                            <option>{{ $option }}</option>
+                        @endforeach
                     </select>
                 @endif
             @endif
@@ -42,6 +54,7 @@
         <p><button class="primary">Uložit vzhled</button></p>
     </form>
 </div>
+
 <script>
     const preview = document.getElementById('svg-preview');
     fetch(preview.dataset.src)

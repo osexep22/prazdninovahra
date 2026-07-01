@@ -35,6 +35,7 @@ class User extends Authenticatable
         'password',
         'admin_contact_password',
         'admin_contact_code_hash',
+        'admin_contact_code_encrypted',
     ];
 
     /**
@@ -46,6 +47,7 @@ class User extends Authenticatable
         'password',
         'admin_contact_password',
         'admin_contact_code_hash',
+        'admin_contact_code_encrypted',
         'remember_token',
     ];
 

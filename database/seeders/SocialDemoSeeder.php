@@ -106,7 +106,7 @@ class SocialDemoSeeder extends Seeder
                     'recipient_user_id' => null,
                     'thread_type' => 'admin',
                     'subject' => 'Admini',
-                    'body' => 'Ahoj, tohle je testovací odpověď adminů.',
+                    'body' => 'Ahoj, díky za zprávu. Mravenčí rada se na to podívá a dá ti vědět.',
                     'status' => 'answered',
                     'created_at' => now(),
                     'updated_at' => now(),
@@ -117,7 +117,7 @@ class SocialDemoSeeder extends Seeder
                 'message_id' => $adminThreadId,
                 'user_id' => $admin->id,
                 'sender_role' => 'admin',
-                'body' => 'Ahoj, tohle je testovací odpověď adminů. Měl bys ji vidět jako novou v chatu Admini.',
+                'body' => 'Ahoj, mravenčí rada posílá odpověď. Najdeš ji v chatu Admini.',
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);

@@ -4,7 +4,6 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Support\Str;
 
 return new class extends Migration
 {
@@ -15,9 +14,25 @@ return new class extends Migration
             $table->json('ant_avatar_config')->nullable()->after('last_customization_change_at');
         });
 
-        DB::table('users')->orderBy('id')->get()->each(function ($user) {
+        $letters = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+        $digits = '23456789';
+        $makeCode = function () use ($letters, $digits): string {
+            $code = '';
+            for ($i = 0; $i < 3; $i++) {
+                $code .= $letters[random_int(0, strlen($letters) - 1)];
+                $code .= $digits[random_int(0, strlen($digits) - 1)];
+            }
+
+            return $code;
+        };
+
+        DB::table('users')->orderBy('id')->get()->each(function ($user) use ($makeCode) {
+            do {
+                $code = $makeCode();
+            } while (DB::table('users')->where('friend_code', $code)->exists());
+
             DB::table('users')->where('id', $user->id)->update([
-                'friend_code' => strtoupper(Str::random(8)),
+                'friend_code' => $code,
             ]);
         });
 

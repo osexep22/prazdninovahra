@@ -10,13 +10,13 @@
     <h2>Přidat přítele</h2>
     <form method="post" action="/pratele">@csrf
         <label>Kód přítele</label>
-        <input name="friend_code" placeholder="Např. ABCD1234">
+        <input name="friend_code" placeholder="Např. A4P8K2" maxlength="6" style="text-transform:uppercase">
         <p><button class="primary">Přidat</button></p>
     </form>
 </div>
 <h2>Moji přátelé</h2>
 <table>
-    <tr><th>Jméno</th><th>Prestiž</th><th>Level</th><th>Akce</th></tr>
+    <tr><th>Jméno</th><th>Prestiž</th><th>Úroveň</th><th>Akce</th></tr>
     @forelse($friends as $friend)
         <tr>
             <td>{{ $friend->display_name }} <span class="small muted">({{ $friend->username }})</span></td>
