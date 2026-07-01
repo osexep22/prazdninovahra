@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 150" role="img" aria-label="Splnena lokace">
+  <rect width="220" height="150" rx="18" fill="#d8f5ef"/>
+  <path d="M35 105c31-52 68-25 93-67 22 39 54 24 67 67z" fill="#2f855a"/>
+  <path d="M83 73l20 21 39-48" fill="none" stroke="#ffffff" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="110" y="128" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="17" font-weight="800" fill="#174031">HOTOVO</text>
+</svg>

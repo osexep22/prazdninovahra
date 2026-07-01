@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 260 180" role="img" aria-label="Malirska komora">
+  <rect id="edit_color__stena" x="36" y="38" width="188" height="110" rx="16" fill="#d79b63" stroke="#6b4d2e" stroke-width="6"/>
+  <rect id="edit_color__koberec" x="70" y="118" width="120" height="22" rx="8" fill="#b93535"/>
+  <g id="edit_pattern__koberec__pruhy"><path d="M82 118v22M105 118v22M128 118v22M151 118v22M174 118v22" stroke="#fff" stroke-width="4" opacity=".45"/></g>
+  <g id="edit_pattern__koberec__tecky" opacity="0"><circle cx="92" cy="129" r="4"/><circle cx="130" cy="129" r="4"/><circle cx="168" cy="129" r="4"/></g>
+  <line id="edit_color__sloup_vlajky" x1="196" y1="42" x2="196" y2="102" stroke="#5a3d24" stroke-width="6"/>
+  <path id="edit_color__vlajka" d="M199 46h38l-10 16 10 16h-38z" fill="#3f7f6f"/>
+  <text id="edit_variant__vlajka_symbol__mravenec" x="216" y="66" text-anchor="middle" font-size="18">A</text>
+  <text id="edit_variant__vlajka_symbol__koruna" x="216" y="66" text-anchor="middle" font-size="18" opacity="0">K</text>
+  <text id="edit_variant__vlajka_symbol__stetec" x="216" y="66" text-anchor="middle" font-size="18" opacity="0">S</text>
+  <text x="130" y="92" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="20" font-weight="800">MALIR</text>
+</svg>

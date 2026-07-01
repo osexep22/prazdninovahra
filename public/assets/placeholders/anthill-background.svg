@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 700" preserveAspectRatio="none" role="img" aria-label="Pozadi mraveniste">
+  <rect width="1000" height="700" fill="#ead7b8"/>
+  <path d="M0 570c160-70 240 10 390-70 135-72 250-58 390 18 95 52 153 43 220 20v162H0z" fill="#c79c63"/>
+  <path d="M74 122c120 16 182 77 277 56 85-19 124-82 222-66 113 19 147 97 277 74" fill="none" stroke="#8a5a2b" stroke-width="44" stroke-linecap="round" opacity=".42"/>
+  <path d="M96 255c137 0 166 83 282 83 118 0 151-101 284-84 100 13 141 80 253 65" fill="none" stroke="#7a4d27" stroke-width="58" stroke-linecap="round" opacity=".36"/>
+  <path d="M167 467c92-76 177-38 292-62 111-23 155-94 286-68" fill="none" stroke="#6d4323" stroke-width="72" stroke-linecap="round" opacity=".3"/>
+  <ellipse cx="178" cy="132" rx="96" ry="52" fill="#b17a43" opacity=".5"/>
+  <ellipse cx="516" cy="117" rx="122" ry="64" fill="#b17a43" opacity=".45"/>
+  <ellipse cx="854" cy="190" rx="105" ry="58" fill="#b17a43" opacity=".42"/>
+  <ellipse cx="246" cy="356" rx="128" ry="70" fill="#a86e39" opacity=".38"/>
+  <ellipse cx="607" cy="333" rx="150" ry="76" fill="#a86e39" opacity=".35"/>
+  <ellipse cx="422" cy="541" rx="170" ry="82" fill="#955f32" opacity=".32"/>
+  <text x="500" y="42" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="28" font-weight="800" fill="#5c361c">MRAVENISTE PLACEHOLDER</text>
+</svg>

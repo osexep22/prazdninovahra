@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 120" role="img" aria-label="Dostupny slot">
+  <ellipse cx="90" cy="66" rx="70" ry="42" fill="#b9824f" stroke="#6d4323" stroke-width="6"/>
+  <ellipse cx="90" cy="66" rx="48" ry="26" fill="#efd5b5"/>
+  <text x="90" y="72" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="15" font-weight="800" fill="#5b351c">SLOT</text>
+</svg>

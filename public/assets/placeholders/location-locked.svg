@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 150" role="img" aria-label="Zamcena lokace">
+  <rect width="220" height="150" rx="18" fill="#d5d8dc"/>
+  <path d="M45 98c25-38 55-18 75-48 20 26 43 16 58 48z" fill="#8b949e"/>
+  <text x="110" y="80" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="22" font-weight="700" fill="#38414a">ZAMCENO</text>
+</svg>
