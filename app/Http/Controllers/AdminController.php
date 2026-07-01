@@ -29,6 +29,11 @@ class AdminController extends Controller
             'pending' => DB::table('users')->where('status', 'pending_approval')->count(),
             'newMessages' => DB::table('messages')->where('status', 'new')->count(),
             'manualTasks' => DB::table('user_task_progress')->where('status', 'pending')->whereNotNull('submitted_answer')->count(),
+            'sourceStats' => DB::table('users')
+                ->where('role', 'player')
+                ->select('registration_source', DB::raw('COUNT(*) as total'))
+                ->groupBy('registration_source')
+                ->pluck('total', 'registration_source'),
             'activity' => DB::table('audit_logs')
                 ->leftJoin('users as actors', 'actors.id', '=', 'audit_logs.actor_user_id')
                 ->leftJoin('users as targets', 'targets.id', '=', 'audit_logs.target_user_id')

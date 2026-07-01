@@ -13,13 +13,20 @@ use Illuminate\Support\Facades\Hash;
 
 class AuthController extends Controller
 {
-    public function showLogin(): Response|RedirectResponse
+    public function showLogin(Request $request): Response|RedirectResponse
     {
         if (Auth::check()) {
             return redirect('/palouk');
         }
 
-        return $this->uncachedView('auth.login');
+        $src = $this->validRegistrationSource($request->query('src'));
+        if ($src) {
+            $request->session()->put('registration_source', $src);
+        }
+
+        return $this->uncachedView('auth.login', [
+            'src' => $request->session()->get('registration_source'),
+        ]);
     }
 
     public function login(Request $request): RedirectResponse
@@ -54,9 +61,13 @@ class AuthController extends Controller
     public function showRegister(Request $request): Response
     {
         $captcha = $this->newCaptcha($request);
+        $src = $this->validRegistrationSource($request->query('src')) ?: $this->validRegistrationSource($request->session()->get('registration_source'));
+        if ($src) {
+            $request->session()->put('registration_source', $src);
+        }
 
         return $this->uncachedView('auth.register', [
-            'src' => $request->query('src'),
+            'src' => $src,
             'captchaQuestion' => $captcha['question'],
         ]);
     }
@@ -113,7 +124,7 @@ class AuthController extends Controller
             'password' => Hash::make($data['password']),
             'admin_contact_code_hash' => Hash::make($data['admin_contact_code']),
             'admin_contact_code_encrypted' => Crypt::encryptString($data['admin_contact_code']),
-            'registration_source' => $data['src'] ?? null,
+            'registration_source' => $this->validRegistrationSource($data['src'] ?? null) ?: $this->validRegistrationSource($request->session()->get('registration_source')),
             'friend_code' => $this->newFriendCode(),
             'status' => 'pending_approval',
             'role' => 'player',
@@ -125,6 +136,7 @@ class AuthController extends Controller
         Auth::login($user);
         $request->session()->regenerate();
         $request->session()->forget('antispam_answer');
+        $request->session()->forget('registration_source');
 
         return redirect('/palouk');
     }
@@ -145,6 +157,13 @@ class AuthController extends Controller
         $username = trim($username, '-_');
 
         return $username !== '' ? $username : 'hrac';
+    }
+
+    private function validRegistrationSource(mixed $src): ?string
+    {
+        $src = trim((string) $src);
+
+        return in_array($src, ['1', '2', '3', '4', '5', '6', '7'], true) ? $src : null;
     }
 
     private function newFriendCode(): string

@@ -31,7 +31,7 @@
                 <input name="username" value="{{ old('username') }}" required autofocus>
                 <label>Heslo</label>
                 <input name="password" type="password" required>
-                <p><button class="primary">Přihlásit</button> <a class="btn" href="/register">Registrovat</a></p>
+                <p><button class="primary">Přihlásit</button> <a class="btn" href="{{ $src ? '/register?src=' . urlencode($src) : '/register' }}">Registrovat</a></p>
             </form>
         </div>
     </div>

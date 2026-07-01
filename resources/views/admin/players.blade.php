@@ -9,6 +9,7 @@
     <tr>
         <th>Přezdívka</th>
         <th>Uživatelské jméno</th>
+        <th>Zdroj</th>
         <th>Ověřovací kód</th>
         <th>Stav</th>
         <th>Prestiž</th>
@@ -18,6 +19,13 @@
         <tr>
             <td>{{ $player->display_name }}</td>
             <td>{{ $player->username }}</td>
+            <td>
+                @if($player->registration_source)
+                    QR {{ $player->registration_source }}
+                @else
+                    <span class="small muted">neznámý</span>
+                @endif
+            </td>
             <td>
                 @if($player->admin_contact_code_plain)
                     <code>{{ $player->admin_contact_code_plain }}</code>

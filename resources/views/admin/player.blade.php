@@ -7,6 +7,15 @@
 <div class="grid">
     <div class="panel">
         <h2>Ověření hráče</h2>
+        <p>Zdroj registrace:
+            <b>
+                @if($player->registration_source)
+                    QR {{ $player->registration_source }}
+                @else
+                    neznámý
+                @endif
+            </b>
+        </p>
         <p class="small">Kód pro komunikaci s adminy slouží k rychlému ověření, že mluvíme se správným hráčem.</p>
         <div class="stat">
             @if($player->admin_contact_code_plain)

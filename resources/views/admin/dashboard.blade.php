@@ -8,6 +8,21 @@
 </div>
 <p>Úkoly čekající na kontrolu: <b>{{ $manualTasks }}</b></p>
 <p class="row"><a class="btn" href="/admin/hraci">Hráči</a><a class="btn" href="/admin/zpravy">Zprávy</a><a class="btn" href="/admin/novinky">Novinky</a><a class="btn" href="/admin/obsah">Herní obsah</a></p>
+<h2>Zdroje registrací</h2>
+<div class="grid">
+    @for($source = 1; $source <= 7; $source++)
+        <div class="card">
+            <h3>QR {{ $source }}</h3>
+            <p><b>{{ $sourceStats[(string) $source] ?? 0 }}</b> hráčů</p>
+            <p class="small"><code>{{ url('/login?src=' . $source) }}</code></p>
+        </div>
+    @endfor
+    <div class="card">
+        <h3>Neznámý zdroj</h3>
+        <p><b>{{ $sourceStats[''] ?? $sourceStats[null] ?? 0 }}</b> hráčů</p>
+        <p class="small">Registrace bez QR parametru.</p>
+    </div>
+</div>
 <h2>Poslední aktivita</h2>
 @foreach($activity as $item)
     <div class="card" style="margin-bottom:8px">

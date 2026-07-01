@@ -12,7 +12,7 @@
     @if($errors->any()) <div class="flash err">{{ $errors->first() }}</div> @endif
     <form method="post" action="/register" autocomplete="off" data-register-form>
         @csrf
-        <input type="hidden" name="src" value="{{ $src }}">
+        <input type="hidden" name="src" value="{{ old('src', $src) }}">
         <div style="position:absolute;left:-9999px"><label>Web</label><input name="website" tabindex="-1"></div>
 
         <label>Přezdívka</label>
