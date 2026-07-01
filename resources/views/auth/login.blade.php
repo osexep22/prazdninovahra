@@ -1,5 +1,12 @@
-﻿@extends('layouts.app')
+@extends('layouts.app')
 @section('content')
+<script>
+    window.addEventListener('pageshow', (event) => {
+        if (event.persisted) {
+            window.location.reload();
+        }
+    });
+</script>
 <div class="login-shell">
     <div class="login-stack">
         <div class="auth-game-title">
@@ -14,11 +21,11 @@
                 <div class="help-popover">
                     <b>Co je Prázdninová hra?</b>
                     <p>Letní dobrodružství pro děti a rodiny. Hráči plní šifry a úkoly na palouku, sbírají suroviny, staví mraveniště a postupně odemykají další části příběhu.</p>
-                    <p>Hra je určená pro prázdninové testování v terénu i doma. Admini mohou sledovat postup hráčů a pomáhat jim přes zprávy.</p>
+                    <p>Na cestě potkají obyvatele palouku, napraví staré chyby a pomohou mravenčí výpravě najít nový domov.</p>
                 </div>
             </div>
             @if($errors->any()) <div class="flash err">{{ $errors->first() }}</div> @endif
-            <form method="post" action="/login">
+            <form method="post" action="/login" autocomplete="off">
                 @csrf
                 <label>Přezdívka</label>
                 <input name="username" value="{{ old('username') }}" required autofocus>

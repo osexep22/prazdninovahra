@@ -5,16 +5,20 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
-use Illuminate\View\View;
 
 class AuthController extends Controller
 {
-    public function showLogin(): View
+    public function showLogin(): Response|RedirectResponse
     {
-        return view('auth.login');
+        if (Auth::check()) {
+            return redirect('/palouk');
+        }
+
+        return $this->uncachedView('auth.login');
     }
 
     public function login(Request $request): RedirectResponse
@@ -34,7 +38,10 @@ class AuthController extends Controller
 
             if (Auth::user()->status === 'blocked') {
                 Auth::logout();
-                return back()->withErrors(['username' => 'Účet je zablokovaný.']);
+                $request->session()->invalidate();
+                $request->session()->regenerateToken();
+
+                return redirect('/login')->withErrors(['username' => 'Účet je zablokovaný.']);
             }
 
             return redirect()->intended('/palouk');
@@ -43,11 +50,11 @@ class AuthController extends Controller
         return back()->withErrors(['username' => 'Přezdívka nebo heslo nesedí.'])->onlyInput('username');
     }
 
-    public function showRegister(Request $request): View
+    public function showRegister(Request $request): Response
     {
         $captcha = $this->newCaptcha($request);
 
-        return view('auth.register', [
+        return $this->uncachedView('auth.register', [
             'src' => $request->query('src'),
             'captchaQuestion' => $captcha['question'],
         ]);
@@ -69,6 +76,7 @@ class AuthController extends Controller
             'antispam' => 'antispam',
             'website' => 'kontrolní pole',
         ]);
+
         $username = $this->usernameFromDisplayName($data['display_name']);
 
         if (User::where('username', $username)->exists()) {
@@ -93,9 +101,19 @@ class AuthController extends Controller
         ]);
 
         Auth::login($user);
+        $request->session()->regenerate();
         $request->session()->forget('antispam_answer');
 
         return redirect('/palouk');
+    }
+
+    public function logout(Request $request): RedirectResponse
+    {
+        Auth::logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
+        return redirect('/login')->withHeaders($this->noStoreHeaders());
     }
 
     private function usernameFromDisplayName(string $displayName): string
@@ -140,12 +158,19 @@ class AuthController extends Controller
         ];
     }
 
-    public function logout(Request $request): RedirectResponse
+    private function uncachedView(string $view, array $data = []): Response
     {
-        Auth::logout();
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
+        return response()
+            ->view($view, $data)
+            ->withHeaders($this->noStoreHeaders());
+    }
 
-        return redirect('/login');
+    private function noStoreHeaders(): array
+    {
+        return [
+            'Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0',
+            'Pragma' => 'no-cache',
+            'Expires' => 'Sat, 01 Jan 2000 00:00:00 GMT',
+        ];
     }
 }

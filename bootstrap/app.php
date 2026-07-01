@@ -16,7 +16,7 @@ return Application::configure(basePath: dirname(__DIR__))
             \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
             \Illuminate\Session\Middleware\StartSession::class,
             \Illuminate\View\Middleware\ShareErrorsFromSession::class,
-            \Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class,
+            \App\Http\Middleware\ValidateCsrfToken::class,
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
         ]);
 
@@ -25,5 +25,22 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        $exceptions->render(function (\Illuminate\Session\TokenMismatchException $e, \Illuminate\Http\Request $request) {
+            if ($request->is('login') || $request->is('register')) {
+                return redirect('/login')->withErrors([
+                    'username' => 'Přihlašovací stránka mezitím vypršela. Zkus to prosím znovu.',
+                ]);
+            }
+
+            return null;
+        });
+        $exceptions->respond(function (\Symfony\Component\HttpFoundation\Response $response) {
+            if ($response->getStatusCode() === 419) {
+                return redirect('/login')->withErrors([
+                    'username' => 'Přihlašovací stránka mezitím vypršela. Zkus to prosím znovu.',
+                ]);
+            }
+
+            return $response;
+        });
     })->create();

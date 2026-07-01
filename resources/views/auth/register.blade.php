@@ -1,9 +1,16 @@
 @extends('layouts.app')
 @section('content')
+<script>
+    window.addEventListener('pageshow', (event) => {
+        if (event.persisted) {
+            window.location.reload();
+        }
+    });
+</script>
 <div class="panel auth-card">
     <h1>Registrace</h1>
     @if($errors->any()) <div class="flash err">{{ $errors->first() }}</div> @endif
-    <form method="post" action="/register">
+    <form method="post" action="/register" autocomplete="off">
         @csrf
         <input type="hidden" name="src" value="{{ $src }}">
         <div style="position:absolute;left:-9999px"><label>Web</label><input name="website" tabindex="-1"></div>
@@ -15,7 +22,7 @@
         <input name="password_confirmation" type="password" required>
         <label>Potvrzovací kód pro komunikaci s adminem</label>
         <input name="admin_contact_code" value="{{ old('admin_contact_code') }}" required>
-        <p class="small">Tenhle kód použiješ, když budeš admina žádat o změnu účtu nebo opravu údajů. Kód není tajné heslo do hry, piš ho čitelně.</p>
+        <p class="small">Tenhle kód použiješ, když budeš admina žádat o změnu účtu nebo opravu údajů. Není to heslo do hry, ale prosím zapiš si ho čitelně.</p>
         <label>Antispam: {{ $captchaQuestion }}</label>
         <input name="antispam" inputmode="numeric" required>
         <p><button class="primary">Vytvořit kolonii</button> <a class="btn" href="/login">Mám účet</a></p>
