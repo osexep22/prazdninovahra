@@ -12,7 +12,14 @@ class QuickLaunchSeeder extends Seeder
 {
     public function run(): void
     {
-        $this->clearOldLocationContent();
+        $this->seedContent();
+    }
+
+    public function seedContent(bool $preservePlayerData = false): void
+    {
+        if (! $preservePlayerData) {
+            $this->clearOldLocationContent();
+        }
 
         DB::table('game_contents')->updateOrInsert(
             ['key' => 'intro_story'],
@@ -243,10 +250,11 @@ class QuickLaunchSeeder extends Seeder
         }
 
         $taskIdsByOrder = [];
-        DB::table('location_tasks')->whereIn('location_id', array_values($ids))->delete();
+        if (! $preservePlayerData) {
+            DB::table('location_tasks')->whereIn('location_id', array_values($ids))->delete();
+        }
         foreach ($locations as $location) {
-            $taskId = DB::table('location_tasks')->insertGetId([
-                'location_id' => $ids[$location['slug']],
+            $taskPayload = [
                 'type' => 'code',
                 'title' => 'Úkol ' . $location['order'] . ': ' . $location['name'],
                 'body' => $location['task'],
@@ -256,21 +264,47 @@ class QuickLaunchSeeder extends Seeder
                 'reward_resources' => 8 + $location['order'],
                 'pdf_path' => $taskPdfs[$location['order']] ?? null,
                 'sort_order' => 1,
-                'created_at' => now(),
                 'updated_at' => now(),
-            ]);
+            ];
+            if ($preservePlayerData) {
+                $existingTaskId = DB::table('location_tasks')
+                    ->where('location_id', $ids[$location['slug']])
+                    ->where('sort_order', 1)
+                    ->value('id');
+
+                if ($existingTaskId) {
+                    DB::table('location_tasks')->where('id', $existingTaskId)->update($taskPayload);
+                    $taskId = $existingTaskId;
+                } else {
+                    $taskId = DB::table('location_tasks')->insertGetId($taskPayload + [
+                        'location_id' => $ids[$location['slug']],
+                        'created_at' => now(),
+                    ]);
+                }
+            } else {
+                $taskId = DB::table('location_tasks')->insertGetId($taskPayload + [
+                    'location_id' => $ids[$location['slug']],
+                    'created_at' => now(),
+                ]);
+            }
             $taskIdsByOrder[$location['order']] = $taskId;
-            DB::table('task_hints')->insert([
-                'location_task_id' => $taskId,
+            DB::table('task_hints')->updateOrInsert(
+                [
+                    'location_task_id' => $taskId,
+                    'sort_order' => 1,
+                ],
+                [
                 'text' => 'Když se zasekneš, zkus odpověď zapsat jednoduše a bez zdobení. Správná stopa míří k: ' . mb_strtolower($location['answer'], 'UTF-8') . '.',
                 'cost_resources' => 20,
-                'sort_order' => 1,
                 'created_at' => now(),
                 'updated_at' => now(),
-            ]);
+                ]
+            );
         }
 
-        $this->seedPlayers($ids, $taskIdsByOrder);
+        if (! $preservePlayerData) {
+            $this->seedPlayers($ids, $taskIdsByOrder);
+        }
     }
 
     private function seedPlayers(array $locationIds, array $taskIdsByOrder): void
