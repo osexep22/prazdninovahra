@@ -173,7 +173,7 @@ return new class extends Migration
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
             $table->foreignId('customization_unlock_id')->constrained()->cascadeOnDelete();
             $table->timestamp('unlocked_at');
-            $table->unique(['user_id', 'customization_unlock_id']);
+            $table->unique(['user_id', 'customization_unlock_id'], 'ucu_user_unlock_unique');
         });
 
         Schema::create('user_building_customizations', function (Blueprint $table) {
