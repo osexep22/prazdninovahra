@@ -284,7 +284,7 @@
                 @yield('content')
             </section>
             <aside class="side">
-                <div class="ant-avatar"><img src="/assets/placeholders/ant-avatar.svg" alt="Tvůj mravenec"></div>
+                <div class="ant-avatar"><img src="/assets/placeholders/ant-avatar.svg?v=20260701" alt="Tvůj mravenec"></div>
                 @php $playerNameSize = max(13, min(18, 210 / max(12, mb_strlen($me->display_name)))); @endphp
                 <h3 class="player-name" style="font-size:{{ round($playerNameSize, 1) }}px">{{ $me->display_name }}</h3>
 
