@@ -37,7 +37,7 @@
     </div>
 
     <div class="auth-footer">
-        <span>Kontakt doplníme</span>
+        <a href="mailto:shmhra2025@gmail.com">shmhra2025@gmail.com</a>
         <a href="https://krucemburk.shm.cz/" target="_blank" rel="noopener">SHM Krucemburk</a>
     </div>
 </div>
