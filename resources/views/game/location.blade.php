@@ -14,6 +14,9 @@
     <h1>Úkol {{ $location->name }}</h1>
     <div class="reward-compact">
         <strong>{{ $state === 'completed' ? 'Získaná odměna' : 'Odměna za dokončení stanoviště' }}</strong>
+        @if($state === 'completed')
+            <span class="completed-reward-badge">✓ Splněno</span>
+        @endif
         <div><b>{{ $shownLocationPrestige }}</b> prestiž</div>
         <div><b>{{ $location->reward_resources }}</b> surovin</div>
         <div><b>{{ $location->reward_colony_level }}</b> úroveň kolonie</div>

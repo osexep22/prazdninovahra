@@ -93,6 +93,7 @@
         .reward-compact { display:flex; flex-wrap:wrap; gap:8px 12px; align-items:center; margin:10px 0 14px; padding:8px 10px; border:1px solid #ead9b7; border-radius:8px; background:#fff8e6; font-size:14px; }
         .reward-compact strong { color:#5a3b04; margin-right:2px; }
         .reward-compact div { padding:3px 8px; border-radius:999px; background:rgba(255,255,255,.72); border:1px solid rgba(216,169,40,.28); }
+        .completed-reward-badge { display:inline-flex; align-items:center; gap:6px; padding:6px 12px; border-radius:999px; background:#168a45; color:white; border:2px solid #0f6b34; box-shadow:0 0 0 4px rgba(22,138,69,.18), 0 8px 18px rgba(15,107,52,.2); font-weight:950; text-transform:uppercase; letter-spacing:.04em; }
         .task-reward-row { display:flex; flex-wrap:wrap; align-items:center; gap:7px 10px; margin:8px 0 10px; padding:7px 9px; border-radius:8px; background:#f7fbff; border:1px solid var(--line); font-size:14px; }
         .prestige-reduced { color:#b4232f; font-weight:900; }
         .prestige-reduced s { color:#8c9aae; margin-right:5px; }
