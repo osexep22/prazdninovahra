@@ -61,7 +61,7 @@
         body.is-meadow .top { position:fixed; left:0; right:0; top:0; }
         body.is-meadow main, body.is-anthill main { max-width:none; min-height:100vh; padding:0; display:block; }
         body.is-meadow main > section { min-height:100vh; }
-        body.is-anthill main > section { min-height:100vh; }
+        body.is-anthill main > section { min-height:100vh; background-color:#8b6741; background-image:url('/assets/game/anthill/anthill-background.png'), linear-gradient(180deg, rgba(255,247,226,.12), rgba(61,39,18,.22)); background-position:center; background-size:cover; background-attachment:fixed; }
         body.is-auth { min-height:100vh; background:#b9df94 url('/assets/game/login-meadow-v3.png') center/cover fixed no-repeat; }
         body.is-forest-page { background-color:#8b6741; background-image:url('/assets/game/anthill/anthill-background.png'), url('/assets/game/anthill-map-v2.png'); background-position:center, center; background-size:cover, cover; background-attachment:fixed, fixed; }
         body.is-forest-page main::before { content:''; position:fixed; inset:0; z-index:-1; background:linear-gradient(180deg, rgba(255,247,226,.16), rgba(61,39,18,.22)); pointer-events:none; }
@@ -175,14 +175,14 @@
         .onboarding-arrow.profile { right:-96px; top:-84px; transform:rotate(-24deg); }
         .onboarding-arrow.menu { left:50%; top:-92px; transform:translateX(-50%) rotate(-90deg); }
         .loc[data-state="locked"] a { pointer-events:none; color:inherit; }
-        .anthill-scene { min-height:100vh; padding:108px 24px 32px; background:#8b6741; position:relative; overflow:hidden; display:grid; grid-template-rows:auto minmax(0, 1fr); gap:14px; }
+        .anthill-scene { min-height:100vh; padding:108px 24px 32px; background:transparent; position:relative; overflow:hidden; display:grid; grid-template-rows:auto auto minmax(0, 1fr); gap:14px; }
         .anthill-title { position:relative; z-index:4; width:max-content; max-width:min(540px, calc(100vw - 48px)); padding:10px 14px; border-radius:999px; background:rgba(255,247,226,.84); border:1px solid rgba(255,255,255,.52); box-shadow:0 14px 34px rgba(61,39,18,.2); display:flex; align-items:center; gap:8px; }
         .anthill-economy-panel { position:relative; z-index:4; justify-self:center; width:min(820px, calc(100vw - 48px)); padding:10px 12px; border-radius:8px; background:rgba(255,253,242,.92); border:1px solid rgba(255,255,255,.66); box-shadow:0 12px 28px rgba(61,39,18,.16); display:flex; flex-wrap:wrap; align-items:center; gap:10px 14px; }
         .anthill-title h1 { margin:0; font-size:28px; }
         .anthill-title p:not(.muted) { display:none; position:absolute; left:0; top:52px; width:min(380px, calc(100vw - 36px)); margin:0; padding:12px 14px; border-radius:8px; background:#172033; color:#eaf2f9; box-shadow:0 16px 40px rgba(0,0,0,.24); }
         .anthill-title:hover p:not(.muted), .anthill-title:focus-within p:not(.muted) { display:block; }
         .anthill-title .muted { position:absolute; left:0; top:58px; width:min(520px, calc(100vw - 48px)); margin:0; color:#fff8dc; text-shadow:0 1px 2px rgba(0,0,0,.35); }
-        .anthill-board { position:relative; z-index:1; width:min(calc(100vw - 48px), calc((100vh - 172px) * 1)); max-width:1220px; aspect-ratio:1 / 1; align-self:center; justify-self:center; overflow:hidden; border-radius:8px; background-color:#8b6741; background-image:var(--anthill-variant), url('/assets/game/anthill/anthill-background.png'), url('/assets/game/anthill-map-v2.png'); background-position:center, center, center; background-size:100% 100%, 100% 100%, 100% 100%; background-repeat:no-repeat; box-shadow:0 18px 50px rgba(40,25,12,.26); }
+        .anthill-board { position:relative; z-index:1; width:min(calc(100vw - 48px), calc((100vh - 206px) * 1.333)); max-width:1220px; aspect-ratio:1448 / 1086; align-self:center; justify-self:center; overflow:hidden; border-radius:8px; background-color:transparent; background-image:var(--anthill-variant); background-position:center; background-size:contain; background-repeat:no-repeat; box-shadow:0 18px 50px rgba(40,25,12,.26); }
         .anthill-map { position:absolute; inset:0; z-index:2; border:0; border-radius:0; overflow:hidden; background:transparent; min-height:0; }
         .room { position:absolute; width:150px; min-height:116px; text-align:center; }
         .room img { width:100%; max-height:96px; object-fit:contain; filter:drop-shadow(0 8px 12px rgba(79,55,30,.24)); }

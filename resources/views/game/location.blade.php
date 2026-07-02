@@ -1,7 +1,9 @@
 @extends('layouts.app')
 @section('content')
 @php
-    $storyText = $state === 'completed' ? null : $location->story;
+    $storyText = $state === 'completed'
+        ? ($location->story_completed ?? null)
+        : $location->story;
     $locationImage = $state === 'completed'
         ? (($location->completed_image_path ?? null) ?: $location->story_image_path ?: $location->image_path ?: $location->svg_completed)
         : ($location->story_image_path ?: $location->image_path ?: $location->svg_available);
@@ -18,6 +20,14 @@
     </div>
 
     @if($state === 'completed')
+        @if($locationImage)
+            <p><img src="{{ $locationImage }}" alt="" style="max-width:100%;width:100%;border-radius:8px"></p>
+        @endif
+
+        @if($storyText)
+            <p>{!! nl2br(e($storyText)) !!}</p>
+        @endif
+
         @php($completedPdf = $tasks->first(fn($task) => filled($task->pdf_path ?? null)))
         @if($completedPdf)
             <p><a class="btn" href="{{ $completedPdf->pdf_path }}" download>Stáhnout PDF se zadáním</a></p>
@@ -27,9 +37,6 @@
             <p><img src="{{ $locationImage }}" alt="" style="max-width:100%;width:100%;border-radius:8px"></p>
         @endif
 
-        @if($storyText)
-            <p>{!! nl2br(e($storyText)) !!}</p>
-        @endif
     @endif
 </div>
 
