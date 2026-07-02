@@ -594,14 +594,6 @@ class GameController extends Controller
                     $this->awardBadge('top-10-' . $location->slug, Auth::id(), 'location', $locationId);
                 }
 
-                if (filled($location->story_completed ?? null)) {
-                    session()->flash('completion_story', [
-                        'title' => $location->name . ' je splněno',
-                        'image' => ($location->completed_image_path ?? null) ?: $location->story_image_path ?: $location->image_path,
-                        'body' => $location->story_completed,
-                    ]);
-                }
-
                 if ($location->slug === 'ukol-2') {
                     $this->economy->ensureInitialAnthillRooms(Auth::id());
 
