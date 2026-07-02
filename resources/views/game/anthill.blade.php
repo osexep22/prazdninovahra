@@ -50,7 +50,7 @@
                                             <select name="building_id">
                                                 @foreach($buildings as $building)
                                                     @if(!in_array($building->id, $ownedBuildingIds))
-                                                        <option value="{{ $building->id }}">{{ $building->name }} ({{ $building->cost_resources }} surovin, level {{ $building->min_colony_level }})</option>
+                                                        <option value="{{ $building->id }}">{{ $building->name }} ({{ $building->cost_resources }} surovin, od úrovně kolonie {{ $building->min_colony_level }})</option>
                                                     @endif
                                                 @endforeach
                                             </select>

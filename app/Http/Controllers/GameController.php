@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
@@ -190,8 +191,17 @@ class GameController extends Controller
             ->select('user_buildings.*', 'buildings.name', 'buildings.slug', 'buildings.svg_asset_path')
             ->get()
             ->keyBy('building_slot_id');
-        $buildings = DB::table('buildings')->orderBy('min_colony_level')->get();
-        $ownedBuildingIds = DB::table('user_buildings')->where('user_id', $userId)->pluck('building_id')->all();
+        $buildingQuery = DB::table('buildings')->orderBy('min_colony_level')->orderBy('name');
+        if (Schema::hasColumn('buildings', 'is_available')) {
+            $buildingQuery->where('is_available', true);
+        }
+        $buildings = $buildingQuery->get();
+        $activeBuildingIds = $buildings->pluck('id')->all();
+        $ownedBuildingIds = DB::table('user_buildings')
+            ->where('user_id', $userId)
+            ->whereIn('building_id', $activeBuildingIds)
+            ->pluck('building_id')
+            ->all();
         $anthillVariant = match (true) {
             $capacity >= 10 => '/assets/game/anthill/anthill-10-rooms.png',
             $capacity >= 7 => '/assets/game/anthill/anthill-7-rooms.png',
@@ -305,6 +315,9 @@ class GameController extends Controller
         $building = DB::table('buildings')->find($data['building_id']);
         abort_unless($building, 404);
 
+        if (property_exists($building, 'is_available') && ! $building->is_available) {
+            return back()->with('error', 'Tahle budova zatím není připravená ke stavění.');
+        }
         if ($building->min_colony_level > $user->colony_level) {
             return back()->with('error', 'Budovu zatím nejde postavit. Potřebuješ úroveň kolonie ' . $building->min_colony_level . ', ale teď máš úroveň ' . $user->colony_level . '.');
         }
