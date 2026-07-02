@@ -229,6 +229,11 @@ class QuickLaunchSeeder extends Seeder
             3 => '/assets/game/tasks/task-3-vazka.pdf',
             4 => '/assets/game/tasks/task-4-snek.pdf',
             5 => '/assets/game/tasks/task-5-stonozka.pdf',
+            6 => '/assets/game/tasks/task-6-vodomerka.pdf',
+            7 => '/assets/game/tasks/task-7-beruska.pdf',
+            8 => '/assets/game/tasks/task-8-vcela.pdf',
+            9 => '/assets/game/tasks/task-9-svetluska.pdf',
+            10 => '/assets/game/tasks/task-10-kobylka.pdf',
         ];
 
         $ids = [];
