@@ -214,11 +214,18 @@ class GameController extends Controller
 
     private function anthillSlotLayouts(int $capacity): array
     {
-        if (! Storage::disk('local')->exists('anthill-layout-draft.json')) {
+        $draft = null;
+
+        if (Storage::disk('local')->exists('anthill-layout-draft.json')) {
+            $draft = json_decode(Storage::disk('local')->get('anthill-layout-draft.json'), true);
+        } elseif (file_exists(resource_path('data/anthill-layout.json'))) {
+            $draft = json_decode(file_get_contents(resource_path('data/anthill-layout.json')), true);
+        }
+
+        if (! $draft) {
             return [];
         }
 
-        $draft = json_decode(Storage::disk('local')->get('anthill-layout-draft.json'), true);
         $items = $draft['variants'][(string) $capacity]['items'] ?? $draft['items'] ?? [];
 
         return collect($items)

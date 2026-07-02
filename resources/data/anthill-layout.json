@@ -1,0 +1,66 @@
+{
+  "saved_at": "2026-07-02T20:01:29+00:00",
+  "variants": {
+    "3": {
+      "map": {
+        "width": 1448,
+        "height": 1086,
+        "image": "/assets/game/anthill/anthill-3-rooms.png"
+      },
+      "items": [
+        { "slot": 1, "asset": "/assets/game/rooms/prazdna-mistnost.svg", "x": 50.34, "y": 26.38, "w": 37.3, "h": 53.65 },
+        { "slot": 2, "asset": "/assets/game/rooms/prazdna-mistnost.svg", "x": 28.16, "y": 71.51, "w": 36.1, "h": 36.22 },
+        { "slot": 3, "asset": "/assets/game/rooms/prazdna-mistnost.svg", "x": 74.46, "y": 71.5, "w": 37.42, "h": 41.62 }
+      ]
+    },
+    "5": {
+      "map": {
+        "width": 1448,
+        "height": 1086,
+        "image": "/assets/game/anthill/anthill-5-rooms.png"
+      },
+      "items": [
+        { "slot": 1, "asset": "/assets/game/rooms/prazdna-mistnost.svg", "x": 30.57, "y": 46.03, "w": 30.3, "h": 32.74 },
+        { "slot": 2, "asset": "/assets/game/rooms/prazdna-mistnost.svg", "x": 29.59, "y": 74.7, "w": 30.89, "h": 33.38 },
+        { "slot": 3, "asset": "/assets/game/rooms/prazdna-mistnost.svg", "x": 63.28, "y": 75.48, "w": 29.82, "h": 30.84 },
+        { "slot": 4, "asset": "/assets/game/rooms/prazdna-mistnost.svg", "x": 72.34, "y": 47.7, "w": 31, "h": 30.69 },
+        { "slot": 5, "asset": "/assets/game/rooms/prazdna-mistnost.svg", "x": 50.22, "y": 22.48, "w": 30.88, "h": 31 }
+      ]
+    },
+    "7": {
+      "map": {
+        "width": 1448,
+        "height": 1086,
+        "image": "/assets/game/anthill/anthill-7-rooms.png"
+      },
+      "items": [
+        { "slot": 1, "asset": "/assets/game/rooms/prazdna-mistnost.svg", "x": 26.76, "y": 75.32, "w": 25.31, "h": 25.77 },
+        { "slot": 2, "asset": "/assets/game/rooms/prazdna-mistnost.svg", "x": 53.1, "y": 84.11, "w": 25.66, "h": 25.3 },
+        { "slot": 3, "asset": "/assets/game/rooms/prazdna-mistnost.svg", "x": 77.19, "y": 78.01, "w": 27.2, "h": 24.51 },
+        { "slot": 4, "asset": "/assets/game/rooms/prazdna-mistnost.svg", "x": 50.48, "y": 58.61, "w": 25.3, "h": 25.62 },
+        { "slot": 5, "asset": "/assets/game/rooms/prazdna-mistnost.svg", "x": 31.04, "y": 43.07, "w": 25.78, "h": 27.52 },
+        { "slot": 6, "asset": "/assets/game/rooms/prazdna-mistnost.svg", "x": 70.85, "y": 44.8, "w": 25.54, "h": 25.94 },
+        { "slot": 7, "asset": "/assets/game/rooms/prazdna-mistnost.svg", "x": 50.34, "y": 21.36, "w": 26.25, "h": 29.74 }
+      ]
+    },
+    "10": {
+      "map": {
+        "width": 1448,
+        "height": 1086,
+        "image": "/assets/game/anthill/anthill-10-rooms.png"
+      },
+      "items": [
+        { "slot": 1, "asset": "/assets/game/rooms/prazdna-mistnost.svg", "x": 19.04, "y": 80.31, "w": 23.64, "h": 27.51 },
+        { "slot": 2, "asset": "/assets/game/rooms/prazdna-mistnost.svg", "x": 41.34, "y": 80.85, "w": 23.99, "h": 24.52 },
+        { "slot": 3, "asset": "/assets/game/rooms/prazdna-mistnost.svg", "x": 63.33, "y": 81.18, "w": 24, "h": 23.25 },
+        { "slot": 4, "asset": "/assets/game/rooms/prazdna-mistnost.svg", "x": 83.63, "y": 80.62, "w": 23.89, "h": 24.36 },
+        { "slot": 5, "asset": "/assets/game/rooms/prazdna-mistnost.svg", "x": 26.59, "y": 58.43, "w": 23.76, "h": 23.4 },
+        { "slot": 6, "asset": "/assets/game/rooms/prazdna-mistnost.svg", "x": 51.49, "y": 50.5, "w": 23.16, "h": 21.82 },
+        { "slot": 7, "asset": "/assets/game/rooms/prazdna-mistnost.svg", "x": 75.34, "y": 58.18, "w": 24.47, "h": 22.3 },
+        { "slot": 8, "asset": "/assets/game/rooms/prazdna-mistnost.svg", "x": 67.05, "y": 36.73, "w": 22.81, "h": 22.13 },
+        { "slot": 9, "asset": "/assets/game/rooms/prazdna-mistnost.svg", "x": 33.19, "y": 36.47, "w": 22.7, "h": 21.66 },
+        { "slot": 10, "asset": "/assets/game/rooms/prazdna-mistnost.svg", "x": 50.31, "y": 17.7, "w": 24.35, "h": 23.72 }
+      ]
+    }
+  }
+}

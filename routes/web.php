@@ -67,9 +67,12 @@ Route::middleware('auth')->group(function () {
                 7 => ['width' => 1448, 'height' => 1086, 'image' => '/assets/game/anthill/anthill-7-rooms.png'],
                 10 => ['width' => 1448, 'height' => 1086, 'image' => '/assets/game/anthill/anthill-10-rooms.png'],
             ];
-            $draft = Storage::disk('local')->exists('anthill-layout-draft.json')
-                ? json_decode(Storage::disk('local')->get('anthill-layout-draft.json'), true)
-                : null;
+            $draft = null;
+            if (Storage::disk('local')->exists('anthill-layout-draft.json')) {
+                $draft = json_decode(Storage::disk('local')->get('anthill-layout-draft.json'), true);
+            } elseif (file_exists(resource_path('data/anthill-layout.json'))) {
+                $draft = json_decode(file_get_contents(resource_path('data/anthill-layout.json')), true);
+            }
             $slots = DB::table('building_slots')->where('slot_number', '<=', 10)->orderBy('slot_number')->get();
             $fallbackItems = collect($draft['items'] ?? [])->keyBy(fn (array $item) => (string) ($item['slot'] ?? ''));
             $variants = collect($maps)->mapWithKeys(function (array $map, int $capacity) use ($draft, $slots, $fallbackItems) {
