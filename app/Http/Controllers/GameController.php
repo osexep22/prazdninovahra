@@ -169,7 +169,7 @@ class GameController extends Controller
             $this->economy->ensureInitialAnthillRooms($userId);
         }
         $capacity = $this->economy->anthillCapacity($userId);
-        $slotLayouts = $this->anthillSlotLayouts();
+        $slotLayouts = $this->anthillSlotLayouts($capacity);
         $slots = DB::table('building_slots')
             ->where('slot_number', '<=', $capacity)
             ->orderBy('slot_number')
@@ -212,15 +212,16 @@ class GameController extends Controller
         return view('game.anthill', compact('slots', 'ownedSlots', 'placed', 'buildings', 'ownedBuildingIds', 'readonly', 'owner', 'anthillVariant', 'anthillScale', 'capacity', 'availableExpansions', 'expansionCosts'));
     }
 
-    private function anthillSlotLayouts(): array
+    private function anthillSlotLayouts(int $capacity): array
     {
         if (! Storage::disk('local')->exists('anthill-layout-draft.json')) {
             return [];
         }
 
         $draft = json_decode(Storage::disk('local')->get('anthill-layout-draft.json'), true);
+        $items = $draft['variants'][(string) $capacity]['items'] ?? $draft['items'] ?? [];
 
-        return collect($draft['items'] ?? [])
+        return collect($items)
             ->keyBy(fn (array $item) => (string) ($item['slot'] ?? ''))
             ->all();
     }
