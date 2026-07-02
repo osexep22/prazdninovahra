@@ -117,9 +117,6 @@
         .badge-tip.align-right::after { left:auto; right:0; transform:translate(0, 4px); }
         .badge-tip.align-right:hover::after, .badge-tip.align-right:focus::after { transform:translate(0, 0); }
         .flash { margin:0 0 12px; padding:10px 12px; border-radius:7px; border:1px solid; } .ok { background:#ecfdf3; border-color:#a6d8b7; } .err { background:#fff1f2; border-color:#f0a7b3; }
-        body.is-anthill .flash { position:fixed; left:50%; top:50%; z-index:1200; width:min(520px, calc(100vw - 32px)); margin:0; padding:22px 24px; transform:translate(-50%, -50%); border-radius:8px; background:#fffdf2; border:1px solid #d8b24a; box-shadow:0 24px 80px rgba(0,0,0,.34); color:#26313f; font-weight:850; text-align:center; }
-        body.is-anthill .flash.err { background:#fff7f7; border-color:#df7d8a; }
-        body.is-anthill .flash.ok { background:#f1fff5; border-color:#8bc99f; }
         .field-hint.valid { color:#276749; }
         .field-hint.invalid { color:#b4232f; }
         .login-title { position:relative; display:flex; align-items:center; gap:10px; }
@@ -198,6 +195,10 @@
         .modal-backdrop.spotlight-backdrop { background:rgba(24,31,42,.38); }
         body:has(.spotlight-backdrop:not([hidden])) .meadow-map.highlight-stations .loc.available::after { border-width:6px; box-shadow:0 0 0 7px rgba(255,212,59,.36), 0 0 34px rgba(255,235,59,1), 0 0 54px rgba(255,235,59,.55); }
         .modal-window { max-width:560px; width:100%; max-height:calc(100vh - 36px); overflow:auto; background:white; border-radius:8px; border:1px solid var(--line); padding:22px; box-shadow:0 24px 80px rgba(0,0,0,.34); }
+        .flash-modal .modal-window { background:#fffdf2; border-color:#d8b24a; }
+        .flash-modal.is-error .modal-window { background:#fff7f7; border-color:#df7d8a; }
+        .flash-modal.is-success .modal-window { background:#f1fff5; border-color:#8bc99f; }
+        .flash-modal-message { margin:10px 0 0; color:#26313f; font-weight:850; font-size:18px; }
         .story-window { max-width:760px; max-height:calc(100vh - 36px); overflow:auto; }
         .story-window img { display:block; width:100%; border-radius:8px; margin:14px 0; }
         [hidden] { display:none !important; }
@@ -298,8 +299,10 @@
         </header>
         <main>
             <section>
-                @if(session('success')) <div class="flash ok">{{ session('success') }}</div> @endif
-                @if(session('error')) <div class="flash err">{{ session('error') }}</div> @endif
+                @if(!request()->is('mraveniste') && !request()->is('pratele/*/mraveniste'))
+                    @if(session('success')) <div class="flash ok">{{ session('success') }}</div> @endif
+                    @if(session('error')) <div class="flash err">{{ session('error') }}</div> @endif
+                @endif
                 @yield('content')
             </section>
             <aside class="side">
@@ -359,6 +362,18 @@
                 <p><button class="primary" type="button" data-stats-help-close>Rozumím</button></p>
             </div>
         </div>
+        @if((request()->is('mraveniste') || request()->is('pratele/*/mraveniste')) && (session('success') || session('error')))
+            <div class="modal-backdrop flash-modal {{ session('error') ? 'is-error' : 'is-success' }}" id="anthill-flash-modal">
+                <div class="modal-window" role="dialog" aria-modal="true" aria-labelledby="anthill-flash-title">
+                    <div class="help-modal-title">
+                        <h2 id="anthill-flash-title">{{ session('error') ? 'Ještě to nejde' : 'Hotovo' }}</h2>
+                        <button class="icon-close" type="button" data-anthill-flash-close aria-label="Zavřít">×</button>
+                    </div>
+                    <p class="flash-modal-message">{{ session('error') ?: session('success') }}</p>
+                    <p><button class="primary" type="button" data-anthill-flash-close>Rozumím</button></p>
+                </div>
+            </div>
+        @endif
     @else
         <div class="full">
             @yield('content')
@@ -402,6 +417,20 @@
                     badge.addEventListener('mouseenter', () => alignBadgeTooltip(badge));
                     badge.addEventListener('focus', () => alignBadgeTooltip(badge));
                 });
+
+                const anthillFlashModal = document.getElementById('anthill-flash-modal');
+                if (anthillFlashModal) {
+                    const closeAnthillFlash = () => anthillFlashModal.remove();
+                    document.querySelectorAll('[data-anthill-flash-close]').forEach((button) => {
+                        button.addEventListener('click', closeAnthillFlash);
+                    });
+                    anthillFlashModal.addEventListener('click', (event) => {
+                        if (event.target === anthillFlashModal) closeAnthillFlash();
+                    });
+                    document.addEventListener('keydown', (event) => {
+                        if (event.key === 'Escape' && document.body.contains(anthillFlashModal)) closeAnthillFlash();
+                    });
+                }
             })();
         </script>
     @endauth
