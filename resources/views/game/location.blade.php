@@ -37,6 +37,9 @@
             <p><img src="{{ $locationImage }}" alt="" style="max-width:100%;width:100%;border-radius:8px"></p>
         @endif
 
+        @if($storyText)
+            <p>{!! nl2br(e($storyText)) !!}</p>
+        @endif
     @endif
 </div>
 
