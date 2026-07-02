@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
 class GameController extends Controller
@@ -168,10 +169,20 @@ class GameController extends Controller
             $this->economy->ensureInitialAnthillRooms($userId);
         }
         $capacity = $this->economy->anthillCapacity($userId);
+        $slotLayouts = $this->anthillSlotLayouts();
         $slots = DB::table('building_slots')
             ->where('slot_number', '<=', $capacity)
             ->orderBy('slot_number')
-            ->get();
+            ->get()
+            ->map(function ($slot) use ($slotLayouts) {
+                $layout = $slotLayouts[(string) $slot->slot_number] ?? null;
+                $slot->layout_x = round((float) ($layout['x'] ?? $slot->layout_x), 3);
+                $slot->layout_y = round((float) ($layout['y'] ?? $slot->layout_y), 3);
+                $slot->layout_w = round((float) ($layout['w'] ?? 12), 3);
+                $slot->layout_h = round((float) ($layout['h'] ?? 12), 3);
+
+                return $slot;
+            });
         $ownedSlots = DB::table('user_building_slots')->where('user_id', $userId)->pluck('building_slot_id')->all();
         $placed = DB::table('user_buildings')
             ->join('buildings', 'buildings.id', '=', 'user_buildings.building_id')
@@ -187,12 +198,31 @@ class GameController extends Controller
             $capacity >= 5 => '/assets/game/anthill/anthill-5-rooms.png',
             default => '/assets/game/anthill/anthill-3-rooms.png',
         };
+        $anthillScale = match (true) {
+            $capacity >= 10 => 1.2,
+            $capacity >= 7 => 1.0,
+            $capacity >= 5 => 0.75,
+            default => 0.5,
+        };
         $availableExpansions = $readonly ? [] : $this->economy->availableExpansionTargets($capacity);
         $expansionCosts = collect($availableExpansions)
             ->mapWithKeys(fn (int $target) => [$target => $this->economy->expansionCost($target)])
             ->all();
 
-        return view('game.anthill', compact('slots', 'ownedSlots', 'placed', 'buildings', 'ownedBuildingIds', 'readonly', 'owner', 'anthillVariant', 'capacity', 'availableExpansions', 'expansionCosts'));
+        return view('game.anthill', compact('slots', 'ownedSlots', 'placed', 'buildings', 'ownedBuildingIds', 'readonly', 'owner', 'anthillVariant', 'anthillScale', 'capacity', 'availableExpansions', 'expansionCosts'));
+    }
+
+    private function anthillSlotLayouts(): array
+    {
+        if (! Storage::disk('local')->exists('anthill-layout-draft.json')) {
+            return [];
+        }
+
+        $draft = json_decode(Storage::disk('local')->get('anthill-layout-draft.json'), true);
+
+        return collect($draft['items'] ?? [])
+            ->keyBy(fn (array $item) => (string) ($item['slot'] ?? ''))
+            ->all();
     }
 
     public function buySlot(int $slotId): RedirectResponse

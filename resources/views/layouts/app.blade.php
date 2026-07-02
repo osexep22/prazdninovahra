@@ -175,18 +175,19 @@
         .onboarding-arrow.profile { right:-96px; top:-84px; transform:rotate(-24deg); }
         .onboarding-arrow.menu { left:50%; top:-92px; transform:translateX(-50%) rotate(-90deg); }
         .loc[data-state="locked"] a { pointer-events:none; color:inherit; }
-        .anthill-scene { min-height:100vh; padding:108px 24px 32px; background:transparent; position:relative; overflow:hidden; display:grid; grid-template-rows:auto auto minmax(0, 1fr); gap:14px; }
+        .anthill-scene { min-height:100vh; padding:72px 24px 24px; background:transparent; position:relative; overflow:hidden; display:grid; grid-template-rows:auto minmax(0, 1fr) auto; gap:12px; }
         .anthill-title { position:relative; z-index:4; width:max-content; max-width:min(540px, calc(100vw - 48px)); padding:10px 14px; border-radius:999px; background:rgba(255,247,226,.84); border:1px solid rgba(255,255,255,.52); box-shadow:0 14px 34px rgba(61,39,18,.2); display:flex; align-items:center; gap:8px; }
         .anthill-economy-panel { position:relative; z-index:4; justify-self:center; width:min(820px, calc(100vw - 48px)); padding:10px 12px; border-radius:8px; background:rgba(255,253,242,.92); border:1px solid rgba(255,255,255,.66); box-shadow:0 12px 28px rgba(61,39,18,.16); display:flex; flex-wrap:wrap; align-items:center; gap:10px 14px; }
         .anthill-title h1 { margin:0; font-size:28px; }
         .anthill-title p:not(.muted) { display:none; position:absolute; left:0; top:52px; width:min(380px, calc(100vw - 36px)); margin:0; padding:12px 14px; border-radius:8px; background:#172033; color:#eaf2f9; box-shadow:0 16px 40px rgba(0,0,0,.24); }
         .anthill-title:hover p:not(.muted), .anthill-title:focus-within p:not(.muted) { display:block; }
         .anthill-title .muted { position:absolute; left:0; top:58px; width:min(520px, calc(100vw - 48px)); margin:0; color:#fff8dc; text-shadow:0 1px 2px rgba(0,0,0,.35); }
-        .anthill-board { position:relative; z-index:1; width:min(calc(100vw - 48px), calc((100vh - 206px) * 1.333)); max-width:1220px; aspect-ratio:1448 / 1086; align-self:center; justify-self:center; overflow:hidden; border-radius:8px; background-color:transparent; background-image:var(--anthill-variant); background-position:center; background-size:contain; background-repeat:no-repeat; box-shadow:0 18px 50px rgba(40,25,12,.26); }
+        .anthill-board { position:relative; z-index:1; width:min(calc(100vw - 360px), calc((100dvh - 170px) * 1.333), calc(920px * var(--anthill-scale, 1))); max-width:calc(100vw - 48px); aspect-ratio:1448 / 1086; align-self:center; justify-self:center; overflow:hidden; border-radius:8px; background-color:transparent; background-image:var(--anthill-variant); background-position:center; background-size:contain; background-repeat:no-repeat; box-shadow:0 18px 50px rgba(40,25,12,.26); }
         .anthill-map { position:absolute; inset:0; z-index:2; border:0; border-radius:0; overflow:hidden; background:transparent; min-height:0; }
-        .room { position:absolute; width:150px; min-height:116px; text-align:center; }
-        .room img { width:100%; max-height:96px; object-fit:contain; filter:drop-shadow(0 8px 12px rgba(79,55,30,.24)); }
-        .slot { display:flex; flex-direction:column; gap:8px; justify-content:space-between; }
+        .room { position:absolute; width:12%; height:12%; min-height:0; transform:translate(-50%, -50%); text-align:center; }
+        .room a { display:block; width:100%; height:100%; }
+        .room img { width:100%; height:100%; max-height:none; object-fit:contain; filter:drop-shadow(0 8px 12px rgba(79,55,30,.24)); }
+        .slot { display:block; }
         .modal-backdrop { position:fixed; inset:0; background:rgba(24,31,42,.72); z-index:1000; display:grid; place-items:center; padding:18px; overflow:auto; }
         .modal-backdrop.spotlight-backdrop { background:rgba(24,31,42,.38); }
         body:has(.spotlight-backdrop:not([hidden])) .meadow-map.highlight-stations .loc.available::after { border-width:6px; box-shadow:0 0 0 7px rgba(255,212,59,.36), 0 0 34px rgba(255,235,59,1), 0 0 54px rgba(255,235,59,.55); }
@@ -221,6 +222,10 @@
         .leader-branch::before { content:''; position:absolute; left:-36px; top:50%; width:64px; height:12px; border-radius:999px; background:linear-gradient(#99632f, #6b3f1d); transform:translateY(-50%); box-shadow:0 6px 12px rgba(81,49,22,.18); }
         .leader-leaf { position:relative; z-index:1; margin-left:26px; width:min(560px, 100%); padding:10px 14px; border-radius:999px; background:#fffdf0; border:1px solid #d8c27c; box-shadow:0 10px 22px rgba(82,98,44,.14); display:flex; justify-content:space-between; gap:12px; align-items:center; }
         .leader-leaf.rank-me { background:#fff3ba; border-color:#d8a928; }
+        .building-preview { width:min(360px, 100%); overflow:hidden; }
+        .building-preview svg { display:block; width:100%; height:auto; max-height:360px; }
+        body.is-building-page { background-color:#8b6741; background-image:url('/assets/game/anthill/anthill-background.png'); background-position:center; background-size:cover; background-attachment:fixed; }
+        body.is-building-page main::before { content:''; position:fixed; inset:0; z-index:-1; background:linear-gradient(180deg, rgba(255,247,226,.14), rgba(61,39,18,.28)); pointer-events:none; }
         table { width:100%; border-collapse:collapse; background:white; } th,td { padding:9px; border-bottom:1px solid var(--line); text-align:left; vertical-align:top; }
         @media (max-width: 860px) { .login-shell { min-height:calc(100vh - 36px); } .auth-game-title h1 { font-size:38px; } .auth-footer { justify-content:flex-start; } main { grid-template-columns:1fr; padding:12px; } .side { position:static; } .top { align-items:center; flex-direction:row; } .hamburger { display:inline-grid; place-items:center; width:42px; height:38px; border:1px solid var(--line); border-radius:7px; background:white; font-size:24px; line-height:1; cursor:pointer; } .nav { display:none; position:absolute; left:12px; right:12px; top:calc(100% + 8px); padding:10px; border:1px solid var(--line); border-radius:8px; background:rgba(255,255,255,.97); box-shadow:0 18px 40px rgba(31,41,51,.18); } .nav-toggle:checked ~ .nav { display:flex; flex-direction:column; align-items:stretch; } .nav a, .nav button { width:100%; justify-content:flex-start; } .leader-tree { padding-left:62px; } .leader-tree::before { left:24px; } .leader-branch::before { left:-28px; width:52vw; } .leader-leaf { margin-left:34vw; min-width:0; width:calc(100% - 34vw); border-radius:8px; align-items:flex-start; flex-direction:column; } .chat-shell { grid-template-columns:1fr; min-height:auto; } .chat-panel { min-height:520px; } }
         @media (max-width: 860px) {
@@ -251,16 +256,16 @@
             .map { min-height:540px; }
             .anthill-scene { height:auto; min-height:0; padding:12px; overflow:visible; display:block; }
             .anthill-title { position:relative; left:auto; top:auto; z-index:4; width:100%; max-width:none; margin:0 0 12px; border-radius:8px; }
-            .anthill-board { width:100%; max-height:none; align-self:start; order:1; }
+            .anthill-board { width:min(calc(100vw - 24px), calc((100dvh - 170px) * 1.333), calc(920px * var(--anthill-scale, 1))); max-height:none; align-self:start; order:1; }
             .anthill-title p:not(.muted) { width:100%; }
             .anthill-title .muted { top:58px; width:100%; }
-            .room { width:clamp(54px, 16vw, 92px); min-height:0; }
+            .room { min-height:0; }
             .onboarding-arrow.profile { right:6px; top:-58px; font-size:58px; }
             .onboarding-arrow.menu { top:-64px; font-size:58px; }
         }
     </style>
 </head>
-<body class="{{ request()->is('palouk') ? 'is-meadow' : ((request()->is('mraveniste') || request()->is('pratele/*/mraveniste')) ? 'is-anthill' : (auth()->guest() ? 'is-auth' : (request()->is('zebricek') || request()->is('pratele') || request()->is('zpravy') ? 'is-forest-page' : ''))) }}">
+<body class="{{ request()->is('palouk') ? 'is-meadow' : ((request()->is('mraveniste') || request()->is('pratele/*/mraveniste')) ? 'is-anthill' : (auth()->guest() ? 'is-auth' : (request()->is('budovy/*') ? 'is-building-page' : (request()->is('zebricek') || request()->is('pratele') || request()->is('zpravy') ? 'is-forest-page' : '')))) }}">
     @auth
         <header class="top">
             <div class="brand">Prázdninová hra</div>

@@ -2,7 +2,7 @@
 @section('content')
 <div class="panel">
     <h1>{{ $building->name }}</h1>
-    <div id="svg-preview" data-src="{{ $building->svg_asset_path }}" style="max-width:360px;width:100%"></div>
+    <div id="svg-preview" class="building-preview" data-src="{{ $building->svg_asset_path }}"></div>
     <p>
         @if($completed === 0)
             Komůrka se teprve probouzí.

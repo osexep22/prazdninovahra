@@ -60,6 +60,50 @@ Route::middleware('auth')->group(function () {
         Route::get('/obsah', [AdminController::class, 'content']);
         Route::get('/ekonomika', [AdminController::class, 'economy']);
         Route::post('/ekonomika', [AdminController::class, 'updateEconomy']);
+        Route::get('/ladeni-mraveniste', function () {
+            $map = ['width' => 1448, 'height' => 1086, 'image' => '/assets/game/anthill/anthill-10-rooms.png'];
+            $draft = Storage::disk('local')->exists('anthill-layout-draft.json')
+                ? json_decode(Storage::disk('local')->get('anthill-layout-draft.json'), true)
+                : null;
+            $draftItems = collect($draft['items'] ?? [])->keyBy(fn (array $item) => (string) ($item['slot'] ?? ''));
+            $slots = DB::table('building_slots')->where('slot_number', '<=', 10)->orderBy('slot_number')->get()->map(function ($slot) use ($draftItems) {
+                $saved = $draftItems->get((string) $slot->slot_number);
+
+                return [
+                    'slot' => (int) $slot->slot_number,
+                    'asset' => '/assets/game/rooms/prazdna-mistnost.svg',
+                    'x' => round((float) ($saved['x'] ?? $slot->layout_x), 3),
+                    'y' => round((float) ($saved['y'] ?? $slot->layout_y), 3),
+                    'w' => round((float) ($saved['w'] ?? 12), 3),
+                    'h' => round((float) ($saved['h'] ?? 12), 3),
+                ];
+            })->values();
+
+            return view('admin.anthill-editor', [
+                'map' => $map,
+                'items' => $slots,
+                'savedAt' => $draft['saved_at'] ?? null,
+            ]);
+        });
+        Route::post('/ladeni-mraveniste', function (Request $request) {
+            $data = $request->validate([
+                'items' => ['required', 'array'],
+                'items.*.slot' => ['required', 'integer', 'min:1', 'max:10'],
+                'items.*.asset' => ['nullable', 'string'],
+                'items.*.x' => ['required', 'numeric'],
+                'items.*.y' => ['required', 'numeric'],
+                'items.*.w' => ['required', 'numeric', 'min:1'],
+                'items.*.h' => ['required', 'numeric', 'min:1'],
+            ]);
+            $payload = [
+                'map' => ['width' => 1448, 'height' => 1086, 'image' => '/assets/game/anthill/anthill-10-rooms.png'],
+                'saved_at' => now()->toIso8601String(),
+                'items' => array_values($data['items']),
+            ];
+            Storage::disk('local')->put('anthill-layout-draft.json', json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+
+            return response()->json(['ok' => true, 'saved_at' => $payload['saved_at']]);
+        });
         Route::post('/obsah/texty/{key}', [AdminController::class, 'updateGameContent']);
         Route::post('/obsah/lokace/{id}', [AdminController::class, 'updateLocation']);
         Route::post('/obsah/ukoly/{id}', [AdminController::class, 'updateLocationTask']);
