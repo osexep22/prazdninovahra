@@ -9,6 +9,7 @@
 <p>Úkoly čekající na kontrolu: <b>{{ $manualTasks }}</b></p>
 <p class="row"><a class="btn" href="/admin/hraci">Hráči</a><a class="btn" href="/admin/zpravy">Zprávy</a><a class="btn" href="/admin/novinky">Novinky</a><a class="btn" href="/admin/obsah">Herní obsah</a></p>
 <h2>Zdroje registrací</h2>
+<p><a class="btn primary" href="/admin/ekonomika">Ekonomika hry</a></p>
 <div class="grid">
     @for($source = 1; $source <= 7; $source++)
         <div class="card">

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\EconomyService;
 use App\Support\AnswerNormalizer;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -12,6 +13,10 @@ use Illuminate\View\View;
 
 class GameController extends Controller
 {
+    public function __construct(private readonly EconomyService $economy)
+    {
+    }
+
     public function home(): RedirectResponse
     {
         return redirect('/palouk');
@@ -77,8 +82,9 @@ class GameController extends Controller
             ->pluck('task_hints.location_task_id')
             ->unique()
             ->all();
+        $effectiveLocationPrestige = $this->economy->locationPrestigeAfterHint($location, Auth::id());
 
-        return view('game.location', compact('location', 'state', 'tasks', 'progress', 'hints', 'purchased', 'hintedTasks'));
+        return view('game.location', compact('location', 'state', 'tasks', 'progress', 'hints', 'purchased', 'hintedTasks', 'effectiveLocationPrestige'));
     }
 
     public function submitTask(Request $request, int $taskId): RedirectResponse
@@ -106,8 +112,6 @@ class GameController extends Controller
         );
 
         if ($status === 'completed') {
-            $rewardPrestige = $this->taskHintUsed((int) $task->id) ? (int) floor($task->reward_prestige / 2) : (int) $task->reward_prestige;
-            $this->rewardUser($rewardPrestige, $task->reward_resources, 0, 'task_completed', 'location_task', $task->id);
             $storyMessage = $this->syncLocationCompletion($task->location_id);
             return back()->with('success', $storyMessage ?: 'Úkol splněn.');
         }
@@ -138,7 +142,7 @@ class GameController extends Controller
             $this->audit('hint_purchased', 'task_hint', $hint->id, $user->id);
         });
 
-        return back()->with('success', 'Nápověda zobrazena. Maximální prestiž za tento úkol je teď poloviční.');
+        return back()->with('success', 'Nápověda zobrazena. Maximální prestiž za celé stanoviště je snížená.');
     }
 
     public function anthill(): View
@@ -160,7 +164,14 @@ class GameController extends Controller
     {
         $owner = DB::table('users')->find($userId);
         abort_unless($owner, 404);
-        $slots = DB::table('building_slots')->orderBy('slot_number')->get();
+        if (! $readonly) {
+            $this->economy->ensureInitialAnthillRooms($userId);
+        }
+        $capacity = $this->economy->anthillCapacity($userId);
+        $slots = DB::table('building_slots')
+            ->where('slot_number', '<=', $capacity)
+            ->orderBy('slot_number')
+            ->get();
         $ownedSlots = DB::table('user_building_slots')->where('user_id', $userId)->pluck('building_slot_id')->all();
         $placed = DB::table('user_buildings')
             ->join('buildings', 'buildings.id', '=', 'user_buildings.building_id')
@@ -170,15 +181,18 @@ class GameController extends Controller
             ->keyBy('building_slot_id');
         $buildings = DB::table('buildings')->orderBy('min_colony_level')->get();
         $ownedBuildingIds = DB::table('user_buildings')->where('user_id', $userId)->pluck('building_id')->all();
-        $builtRooms = count($ownedBuildingIds);
         $anthillVariant = match (true) {
-            $builtRooms >= 8 => '/assets/game/anthill/anthill-10-rooms.png',
-            $builtRooms >= 6 => '/assets/game/anthill/anthill-7-rooms.png',
-            $builtRooms >= 4 => '/assets/game/anthill/anthill-5-rooms.png',
+            $capacity >= 10 => '/assets/game/anthill/anthill-10-rooms.png',
+            $capacity >= 7 => '/assets/game/anthill/anthill-7-rooms.png',
+            $capacity >= 5 => '/assets/game/anthill/anthill-5-rooms.png',
             default => '/assets/game/anthill/anthill-3-rooms.png',
         };
+        $availableExpansions = $readonly ? [] : $this->economy->availableExpansionTargets($capacity);
+        $expansionCosts = collect($availableExpansions)
+            ->mapWithKeys(fn (int $target) => [$target => $this->economy->expansionCost($target)])
+            ->all();
 
-        return view('game.anthill', compact('slots', 'ownedSlots', 'placed', 'buildings', 'ownedBuildingIds', 'readonly', 'owner', 'anthillVariant'));
+        return view('game.anthill', compact('slots', 'ownedSlots', 'placed', 'buildings', 'ownedBuildingIds', 'readonly', 'owner', 'anthillVariant', 'capacity', 'availableExpansions', 'expansionCosts'));
     }
 
     public function buySlot(int $slotId): RedirectResponse
@@ -212,6 +226,35 @@ class GameController extends Controller
         return back()->with('success', 'Slot koupen.');
     }
 
+    public function buyAnthillExpansion(int $rooms): RedirectResponse
+    {
+        $this->ensureAnthillUnlocked();
+        $user = Auth::user();
+        $this->economy->ensureInitialAnthillRooms($user->id);
+
+        $capacity = $this->economy->anthillCapacity($user->id);
+        abort_unless(in_array($rooms, $this->economy->expansionTargets(), true), 404);
+        if ($rooms <= $capacity) {
+            return back();
+        }
+
+        $cost = $this->economy->expansionCost($rooms);
+        if ($user->resources < $cost) {
+            return back()->with('error', 'Nemáš dost surovin na rozšíření mraveniště.');
+        }
+
+        DB::transaction(function () use ($user, $rooms, $cost) {
+            DB::table('users')->where('id', $user->id)->decrement('resources', $cost);
+            $this->economy->grantRooms($user->id, $rooms, $cost);
+            $this->audit('anthill_expansion_purchased', 'anthill_expansion', $rooms, $user->id, [
+                'rooms' => $rooms,
+                'resources' => -$cost,
+            ]);
+        });
+
+        return back()->with('success', 'Mraveniště rozšířeno na ' . $rooms . ' komůrek.');
+    }
+
     public function build(Request $request): RedirectResponse
     {
         $data = $request->validate([
@@ -220,6 +263,7 @@ class GameController extends Controller
         ]);
         $user = Auth::user();
         $this->ensureAnthillUnlocked();
+        $this->economy->ensureInitialAnthillRooms($user->id);
         $building = DB::table('buildings')->find($data['building_id']);
         abort_unless($building, 404);
 
@@ -542,7 +586,8 @@ class GameController extends Controller
                 ['status' => 'completed', 'completed_at' => now()]
             );
             if (! $already) {
-                $this->rewardUser($location->reward_prestige, $location->reward_resources, $location->reward_colony_level, 'location_completed', 'location', $locationId);
+                $rewardPrestige = $this->economy->locationPrestigeAfterHint($location, Auth::id());
+                $this->rewardUser($rewardPrestige, $location->reward_resources, $location->reward_colony_level, 'location_completed', 'location', $locationId);
                 $this->awardBadge('lokace-' . $location->slug, Auth::id(), 'location', $locationId);
                 $completedCount = DB::table('user_location_progress')->where(['location_id' => $locationId, 'status' => 'completed'])->count();
                 if ($completedCount <= 10) {
@@ -558,6 +603,8 @@ class GameController extends Controller
                 }
 
                 if ($location->slug === 'ukol-2') {
+                    $this->economy->ensureInitialAnthillRooms(Auth::id());
+
                     return 'Mravenečci si konečně postavili první opravdový domov. Od téhle chvíle můžeš navštívit své Mraveniště a začít stavět nové místnosti.';
                 }
             }

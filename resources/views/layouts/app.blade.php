@@ -177,6 +177,7 @@
         .loc[data-state="locked"] a { pointer-events:none; color:inherit; }
         .anthill-scene { min-height:100vh; padding:108px 24px 32px; background:#8b6741; position:relative; overflow:hidden; display:grid; grid-template-rows:auto minmax(0, 1fr); gap:14px; }
         .anthill-title { position:relative; z-index:4; width:max-content; max-width:min(540px, calc(100vw - 48px)); padding:10px 14px; border-radius:999px; background:rgba(255,247,226,.84); border:1px solid rgba(255,255,255,.52); box-shadow:0 14px 34px rgba(61,39,18,.2); display:flex; align-items:center; gap:8px; }
+        .anthill-economy-panel { position:relative; z-index:4; justify-self:center; width:min(820px, calc(100vw - 48px)); padding:10px 12px; border-radius:8px; background:rgba(255,253,242,.92); border:1px solid rgba(255,255,255,.66); box-shadow:0 12px 28px rgba(61,39,18,.16); display:flex; flex-wrap:wrap; align-items:center; gap:10px 14px; }
         .anthill-title h1 { margin:0; font-size:28px; }
         .anthill-title p:not(.muted) { display:none; position:absolute; left:0; top:52px; width:min(380px, calc(100vw - 36px)); margin:0; padding:12px 14px; border-radius:8px; background:#172033; color:#eaf2f9; box-shadow:0 16px 40px rgba(0,0,0,.24); }
         .anthill-title:hover p:not(.muted), .anthill-title:focus-within p:not(.muted) { display:block; }
@@ -274,6 +275,7 @@
                 @if($me->role === 'admin')
                     <a href="/admin/zpravy" class="{{ $adminMessages > 0 ? 'nav-alert' : '' }}">Zprávy admin @if($adminMessages > 0)<span class="nav-badge">{{ $adminMessages }}</span>@endif</a>
                     <a href="/admin">Admin</a>
+                    <a href="/admin/ekonomika">Ekonomika</a>
                 @endif
                 @if(session('impersonator_admin_id'))
                     <form method="post" action="/admin/stop-impersonating" class="inline">@csrf <button class="primary">Zpět do admin účtu</button></form>

@@ -1,0 +1,41 @@
+<?php
+
+return [
+    'settings' => [
+        'hint.prestige_multiplier_percent' => 50,
+        'anthill.initial_rooms' => 3,
+        'anthill.max_rooms' => 10,
+        'anthill.expansion.5.cost_resources' => 170,
+        'anthill.expansion.7.cost_resources' => 150,
+        'anthill.expansion.10.cost_resources' => 200,
+        'building_task.reward_prestige' => 150,
+        'badge.location.prestige_bonus' => 0,
+        'badge.building_task.prestige_bonus' => 0,
+        'badge.top10.prestige_bonus' => 25,
+        'badge.special.prestige_bonus' => 50,
+    ],
+    'location_rewards' => [
+        'ukol-1' => ['resources' => 100, 'prestige' => 180],
+        'ukol-2' => ['resources' => 100, 'prestige' => 125],
+        'ukol-3' => ['resources' => 100, 'prestige' => 125],
+        'ukol-4' => ['resources' => 100, 'prestige' => 150],
+        'ukol-5' => ['resources' => 150, 'prestige' => 200],
+        'ukol-6' => ['resources' => 150, 'prestige' => 150],
+        'ukol-7' => ['resources' => 190, 'prestige' => 100],
+        'ukol-8' => ['resources' => 180, 'prestige' => 180],
+        'ukol-9' => ['resources' => 200, 'prestige' => 200],
+        'ukol-10' => ['resources' => 160, 'prestige' => 100],
+    ],
+    'building_costs' => [
+        'telocvicna' => 70,
+        'krejci' => 80,
+        'kuchyn' => 90,
+        'malirska-komora' => 100,
+        'obyvak' => 110,
+        'remeslnik' => 120,
+        'hudebna' => 130,
+        'zahradnik' => 150,
+        'porodnice' => 165,
+        'hospoda' => 185,
+    ],
+];

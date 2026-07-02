@@ -1,13 +1,12 @@
 @extends('layouts.app')
 @section('content')
 @php
-    $completionStory = session('completion_story');
-    $storyText = $state === 'completed' && filled($location->story_completed ?? null)
-        ? $location->story_completed
-        : $location->story;
+    $completionStory = null;
+    $storyText = $state === 'completed' ? null : $location->story;
     $locationImage = $state === 'completed'
         ? (($location->completed_image_path ?? null) ?: $location->story_image_path ?: $location->image_path ?: $location->svg_completed)
         : ($location->story_image_path ?: $location->image_path ?: $location->svg_available);
+    $shownLocationPrestige = $effectiveLocationPrestige ?? $location->reward_prestige;
 @endphp
 
 @if($completionStory)
@@ -26,15 +25,20 @@
 @endif
 
 <div class="panel">
-    <h1>{{ $location->name }}</h1>
+    <h1>Úkol {{ $location->name }}</h1>
     <div class="reward-compact">
         <strong>Odměna</strong>
-        <div><b>{{ $location->reward_prestige }}</b> prestiž</div>
+        <div><b>{{ $shownLocationPrestige }}</b> prestiž</div>
         <div><b>{{ $location->reward_resources }}</b> surovin</div>
         <div><b>{{ $location->reward_colony_level }}</b> úroveň kolonie</div>
     </div>
 
-    @if($locationImage)
+    @if($state === 'completed')
+        @php($completedPdf = $tasks->first(fn($task) => filled($task->pdf_path ?? null)))
+        @if($completedPdf)
+            <p><a class="btn" href="{{ $completedPdf->pdf_path }}" download>Stáhnout PDF se zadáním</a></p>
+        @endif
+    @elseif($locationImage)
         <p><img src="{{ $locationImage }}" alt="" style="max-width:100%;width:100%;border-radius:8px"></p>
     @endif
 
@@ -43,6 +47,7 @@
     @endif
 </div>
 
+@if($state !== 'completed')
 <h2 class="task-list-title">Úkoly</h2>
 @foreach($tasks as $task)
     @php
@@ -52,6 +57,7 @@
     @endphp
     <div class="card" style="margin-top:12px">
         <h3>{{ $task->title }} @if($taskCompleted) ✓ @endif</h3>
+        @if(false)
         <div class="task-reward-row">
             <span>Odměna za úkol:</span>
             @if($hintUsed)
@@ -62,6 +68,7 @@
                 <span>{{ $task->reward_resources }} surovin</span>
             @endif
         </div>
+        @endif
         <p>{!! nl2br(e($task->body)) !!}</p>
 
         @if($task->pdf_path)
@@ -89,7 +96,7 @@
             @if(in_array($hint->id, $purchased))
                 <p class="small hint-revealed">{{ $hint->text }}</p>
             @else
-                <form method="post" action="/hints/{{ $hint->id }}/buy" class="inline" onsubmit="return confirm('Použití nápovědy sníží maximální prestiž získanou za tento úkol na polovinu.\n\nOpravdu chceš zobrazit nápovědu?');">
+                <form method="post" action="/hints/{{ $hint->id }}/buy" class="inline" onsubmit="return confirm('Použití nápovědy sníží maximální prestiž za celé stanoviště.\n\nOpravdu chceš zobrazit nápovědu?');">
                     @csrf
                     <button>Nápověda</button>
                 </form>
@@ -100,4 +107,5 @@
         <p><a href="/zpravy?subject=Pomoc:%20{{ urlencode($location->name) }}">Požádat admina o pomoc</a></p>
     </div>
 @endforeach
+@endif
 @endsection

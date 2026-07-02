@@ -29,6 +29,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/hints/{hintId}/buy', [GameController::class, 'buyHint']);
     Route::get('/mraveniste', [GameController::class, 'anthill']);
     Route::get('/pratele/{friendId}/mraveniste', [GameController::class, 'friendAnthill']);
+    Route::post('/mraveniste/rozsireni/{rooms}', [GameController::class, 'buyAnthillExpansion']);
     Route::post('/mraveniste/slots/{slotId}/buy', [GameController::class, 'buySlot']);
     Route::post('/mraveniste/build', [GameController::class, 'build']);
     Route::get('/budovy/{slug}', [GameController::class, 'building']);
@@ -57,6 +58,8 @@ Route::middleware('auth')->group(function () {
         Route::get('/novinky', [AdminController::class, 'announcements']);
         Route::post('/novinky', [AdminController::class, 'storeAnnouncement']);
         Route::get('/obsah', [AdminController::class, 'content']);
+        Route::get('/ekonomika', [AdminController::class, 'economy']);
+        Route::post('/ekonomika', [AdminController::class, 'updateEconomy']);
         Route::post('/obsah/texty/{key}', [AdminController::class, 'updateGameContent']);
         Route::post('/obsah/lokace/{id}', [AdminController::class, 'updateLocation']);
         Route::post('/obsah/ukoly/{id}', [AdminController::class, 'updateLocationTask']);

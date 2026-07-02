@@ -10,6 +10,23 @@
             <p class="muted">Nahlížíš na mraveniště přítele. Je jen pro čtení.</p>
         @endif
     </div>
+    @if(!($readonly ?? false))
+        <div class="anthill-economy-panel">
+            <b>Kapacita: {{ $capacity ?? 3 }} komůrek</b>
+            @if(!empty($availableExpansions))
+                <div class="row">
+                    @foreach($availableExpansions as $target)
+                        <form method="post" action="/mraveniste/rozsireni/{{ $target }}" class="inline">
+                            @csrf
+                            <button type="submit">Rozšířit na {{ $target }} za {{ $expansionCosts[$target] ?? 0 }} surovin</button>
+                        </form>
+                    @endforeach
+                </div>
+            @else
+                <span class="small muted">Mraveniště má největší dostupné rozšíření.</span>
+            @endif
+        </div>
+    @endif
     <div class="anthill-board" style="--anthill-variant:url('{{ $anthillVariant }}')">
     <div class="anthill-map">
     @foreach($slots as $slot)

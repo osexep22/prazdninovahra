@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\EconomyService;
 use App\Support\AnswerNormalizer;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -15,6 +16,10 @@ use Illuminate\View\View;
 
 class AdminController extends Controller
 {
+    public function __construct(private readonly EconomyService $economy)
+    {
+    }
+
     private function guardAdmin(): void
     {
         abort_unless(Auth::check() && Auth::user()->role === 'admin', 403);
@@ -356,6 +361,141 @@ class AdminController extends Controller
         ]);
 
         return back()->with('success', 'Oznámení vytvořeno.');
+    }
+
+    public function economy(): View
+    {
+        $this->guardAdmin();
+
+        return view('admin.economy', [
+            'settings' => $this->economy->allSettings(),
+            'locations' => DB::table('locations')->orderBy('sort_order')->get(['id', 'name', 'slug', 'reward_resources', 'reward_prestige']),
+            'buildings' => DB::table('buildings')->orderBy('name')->get(['id', 'name', 'slug', 'cost_resources']),
+            'buildingTasks' => DB::table('building_tasks')
+                ->join('buildings', 'buildings.id', '=', 'building_tasks.building_id')
+                ->select('building_tasks.id', 'building_tasks.title', 'building_tasks.reward_prestige', 'building_tasks.reward_resources', 'buildings.name as building_name')
+                ->orderBy('buildings.name')
+                ->orderBy('building_tasks.sort_order')
+                ->get(),
+            'badges' => DB::table('badges')->orderBy('slug')->get(['id', 'slug', 'name', 'prestige_bonus']),
+        ]);
+    }
+
+    public function updateEconomy(Request $request): RedirectResponse
+    {
+        $this->guardAdmin();
+        $data = $request->validate([
+            'locations' => ['array'],
+            'locations.*.reward_resources' => ['required', 'integer', 'min:0'],
+            'locations.*.reward_prestige' => ['required', 'integer', 'min:0'],
+            'settings' => ['array'],
+            'settings.*' => ['required', 'integer', 'min:0'],
+            'buildings' => ['array'],
+            'buildings.*.cost_resources' => ['required', 'integer', 'min:0'],
+            'building_tasks' => ['array'],
+            'building_tasks.*.reward_prestige' => ['required', 'integer', 'min:0'],
+            'building_tasks.*.reward_resources' => ['required', 'integer', 'min:0'],
+            'badges' => ['array'],
+            'badges.*.prestige_bonus' => ['required', 'integer', 'min:0'],
+        ]);
+
+        DB::transaction(function () use ($data) {
+            foreach (($data['locations'] ?? []) as $id => $reward) {
+                DB::table('locations')->where('id', (int) $id)->update([
+                    'reward_resources' => (int) $reward['reward_resources'],
+                    'reward_prestige' => (int) $reward['reward_prestige'],
+                    'updated_at' => now(),
+                ]);
+            }
+
+            $this->economy->updateSettings($data['settings'] ?? []);
+
+            if (array_key_exists('badge.location.prestige_bonus', $data['settings'] ?? [])) {
+                DB::table('badges')->where('slug', 'like', 'lokace-%')->update([
+                    'prestige_bonus' => (int) $data['settings']['badge.location.prestige_bonus'],
+                    'updated_at' => now(),
+                ]);
+            }
+            if (array_key_exists('badge.top10.prestige_bonus', $data['settings'] ?? [])) {
+                DB::table('badges')->where('slug', 'like', 'top-10-%')->update([
+                    'prestige_bonus' => (int) $data['settings']['badge.top10.prestige_bonus'],
+                    'updated_at' => now(),
+                ]);
+            }
+            if (array_key_exists('badge.building_task.prestige_bonus', $data['settings'] ?? [])) {
+                DB::table('badges')
+                    ->whereIn('slug', ['vsechny-ukoly-budovy', 'prvni-budova', 'pet-budov'])
+                    ->update([
+                        'prestige_bonus' => (int) $data['settings']['badge.building_task.prestige_bonus'],
+                        'updated_at' => now(),
+                    ]);
+            }
+            if (array_key_exists('badge.special.prestige_bonus', $data['settings'] ?? [])) {
+                DB::table('badges')->where('slug', 'adminsky-odznacek')->update([
+                    'prestige_bonus' => (int) $data['settings']['badge.special.prestige_bonus'],
+                    'updated_at' => now(),
+                ]);
+            }
+
+            foreach (($data['buildings'] ?? []) as $id => $building) {
+                DB::table('buildings')->where('id', (int) $id)->update([
+                    'cost_resources' => (int) $building['cost_resources'],
+                    'updated_at' => now(),
+                ]);
+            }
+
+            foreach (($data['building_tasks'] ?? []) as $id => $task) {
+                DB::table('building_tasks')->where('id', (int) $id)->update([
+                    'reward_prestige' => (int) $task['reward_prestige'],
+                    'reward_resources' => (int) $task['reward_resources'],
+                    'updated_at' => now(),
+                ]);
+            }
+
+            foreach (($data['badges'] ?? []) as $id => $badge) {
+                DB::table('badges')->where('id', (int) $id)->update([
+                    'prestige_bonus' => (int) $badge['prestige_bonus'],
+                    'updated_at' => now(),
+                ]);
+            }
+
+            if (array_key_exists('badge.location.prestige_bonus', $data['settings'] ?? [])) {
+                DB::table('badges')->where('slug', 'like', 'lokace-%')->update([
+                    'prestige_bonus' => (int) $data['settings']['badge.location.prestige_bonus'],
+                    'updated_at' => now(),
+                ]);
+            }
+            if (array_key_exists('badge.top10.prestige_bonus', $data['settings'] ?? [])) {
+                DB::table('badges')->where('slug', 'like', 'top-10-%')->update([
+                    'prestige_bonus' => (int) $data['settings']['badge.top10.prestige_bonus'],
+                    'updated_at' => now(),
+                ]);
+            }
+            if (array_key_exists('badge.building_task.prestige_bonus', $data['settings'] ?? [])) {
+                DB::table('badges')
+                    ->whereIn('slug', ['vsechny-ukoly-budovy', 'prvni-budova', 'pet-budov'])
+                    ->update([
+                        'prestige_bonus' => (int) $data['settings']['badge.building_task.prestige_bonus'],
+                        'updated_at' => now(),
+                    ]);
+            }
+            if (array_key_exists('badge.special.prestige_bonus', $data['settings'] ?? [])) {
+                DB::table('badges')->where('slug', 'adminsky-odznacek')->update([
+                    'prestige_bonus' => (int) $data['settings']['badge.special.prestige_bonus'],
+                    'updated_at' => now(),
+                ]);
+            }
+        });
+
+        $this->audit('economy_updated', 'economy', null, null, [
+            'locations' => array_keys($data['locations'] ?? []),
+            'settings' => array_keys($data['settings'] ?? []),
+            'buildings' => array_keys($data['buildings'] ?? []),
+            'building_tasks' => array_keys($data['building_tasks'] ?? []),
+            'badges' => array_keys($data['badges'] ?? []),
+        ]);
+
+        return back()->with('success', 'Ekonomika hry uložena.');
     }
 
     public function content(): View
