@@ -79,7 +79,7 @@
                     @if(in_array($hint->id, $purchased))
                         <p class="small hint-revealed">{{ $hint->text }}</p>
                     @else
-                        <form method="post" action="/hints/{{ $hint->id }}/buy" class="inline" onsubmit="return confirm('Použití nápovědy sníží maximální prestiž za celé stanoviště.\n\nOpravdu chceš zobrazit nápovědu?');">
+                        <form method="post" action="/hints/{{ $hint->id }}/buy" class="inline" onsubmit="return confirm('Použití nápovědy sníží získanou prestiž za celé stanoviště na polovinu.\n\nOpravdu chceš zobrazit nápovědu?');">
                             @csrf
                             <button>Nápověda</button>
                         </form>
