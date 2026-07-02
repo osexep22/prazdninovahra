@@ -94,7 +94,10 @@
     };
 
     const showTooltip = (location, event) => {
-        locationInfo.innerHTML = `<p>${location.dataset.description || ''}</p>`;
+        locationInfo.replaceChildren();
+        const text = document.createElement('p');
+        text.textContent = location.dataset.description || '';
+        locationInfo.appendChild(text);
         locationInfo.classList.add('visible');
         if (event) moveTooltip(event);
     };

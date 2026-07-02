@@ -81,7 +81,10 @@
     };
     document.querySelectorAll('.room').forEach(room => {
         room.addEventListener('mouseenter', (event) => {
-            anthillInfo.innerHTML = `<p>${room.dataset.description}</p>`;
+            anthillInfo.replaceChildren();
+            const text = document.createElement('p');
+            text.textContent = room.dataset.description || '';
+            anthillInfo.appendChild(text);
             anthillInfo.classList.add('visible');
             moveAnthillTooltip(event);
         });

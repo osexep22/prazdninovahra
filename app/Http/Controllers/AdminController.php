@@ -371,6 +371,7 @@ class AdminController extends Controller
                 ->orderBy('locations.sort_order')
                 ->orderBy('location_tasks.sort_order')
                 ->get(),
+            'taskHints' => DB::table('task_hints')->orderBy('sort_order')->get()->groupBy('location_task_id'),
             'buildings' => DB::table('buildings')->get(),
             'buildingTasks' => DB::table('building_tasks')
                 ->join('buildings', 'buildings.id', '=', 'building_tasks.building_id')
@@ -449,8 +450,10 @@ class AdminController extends Controller
             'reward_colony_level' => ['required', 'integer', 'min:0'],
             'image' => ['nullable', 'file', 'mimes:png,jpg,jpeg,webp', 'max:5120'],
             'story_image' => ['nullable', 'file', 'mimes:png,jpg,jpeg,webp', 'max:5120'],
+            'completed_image' => ['nullable', 'file', 'mimes:png,jpg,jpeg,webp', 'max:5120'],
             'existing_image_path' => ['nullable', 'string', 'max:255'],
             'existing_story_image_path' => ['nullable', 'string', 'max:255'],
+            'existing_completed_image_path' => ['nullable', 'string', 'max:255'],
         ]);
         $location = DB::table('locations')->find($id);
         abort_unless($location, 404);
@@ -470,6 +473,7 @@ class AdminController extends Controller
             'reward_colony_level' => $data['reward_colony_level'],
             'image_path' => $this->chosenFilePath($data['existing_image_path'] ?? null, $this->uploadPublicFile($request, 'image', 'uploads/locations')) ?: $location->image_path,
             'story_image_path' => $this->chosenFilePath($data['existing_story_image_path'] ?? null, $this->uploadPublicFile($request, 'story_image', 'uploads/locations')) ?: $location->story_image_path,
+            'completed_image_path' => $this->chosenFilePath($data['existing_completed_image_path'] ?? null, $this->uploadPublicFile($request, 'completed_image', 'uploads/locations')) ?: ($location->completed_image_path ?? null),
             'updated_at' => now(),
         ]);
         $this->audit('location_updated', 'location', $id);
@@ -483,6 +487,8 @@ class AdminController extends Controller
         $data = $request->validate([
             'title' => ['required', 'string', 'max:160'],
             'body' => ['required', 'string'],
+            'pdf_intro' => ['nullable', 'string'],
+            'hint_text' => ['nullable', 'string'],
             'answer' => ['nullable', 'string', 'max:2000'],
             'type' => ['required', 'in:code,manual,info'],
             'sort_order' => ['required', 'integer', 'min:1', 'max:999'],
@@ -498,6 +504,7 @@ class AdminController extends Controller
         $payload = [
             'title' => $data['title'],
             'body' => $data['body'],
+            'pdf_intro' => $data['pdf_intro'] ?? null,
             'type' => $data['type'],
             'sort_order' => $data['sort_order'],
             'reward_prestige' => $data['reward_prestige'],
@@ -511,6 +518,15 @@ class AdminController extends Controller
         }
 
         DB::table('location_tasks')->where('id', $id)->update($payload);
+        DB::table('task_hints')->updateOrInsert(
+            ['location_task_id' => $id, 'sort_order' => 1],
+            [
+                'text' => trim((string) ($data['hint_text'] ?? '')),
+                'cost_resources' => 0,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]
+        );
         $this->audit('location_task_updated', 'location_task', $id);
 
         return back()->with('success', 'Úkol uložen.');
@@ -640,12 +656,19 @@ class AdminController extends Controller
         }
 
         $file = $request->file($field);
-        $extension = strtolower($file->getClientOriginalExtension() ?: $file->extension() ?: 'bin');
+        $extension = match ($file->getMimeType()) {
+            'image/png' => 'png',
+            'image/jpeg' => 'jpg',
+            'image/webp' => 'webp',
+            'application/pdf' => 'pdf',
+            default => strtolower($file->extension() ?: 'bin'),
+        };
         $baseName = Str::slug(pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME)) ?: $field;
         $safeName = $baseName . '-' . Str::ulid() . '.' . $extension;
         $diskPath = trim($directory, '/') . '/' . $safeName;
 
-        Storage::disk('public')->putFileAs(trim($directory, '/'), $file, $safeName);
+        $stored = Storage::disk('public')->putFileAs(trim($directory, '/'), $file, $safeName);
+        abort_unless($stored, 500, 'Soubor se nepodařilo uložit.');
         $publicPath = '/storage/' . $diskPath;
 
         DB::table('game_files')->updateOrInsert(

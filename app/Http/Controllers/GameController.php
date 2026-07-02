@@ -70,8 +70,15 @@ class GameController extends Controller
         $progress = DB::table('user_task_progress')->where('user_id', Auth::id())->pluck('status', 'location_task_id');
         $hints = DB::table('task_hints')->whereIn('location_task_id', $tasks->pluck('id'))->orderBy('sort_order')->get()->groupBy('location_task_id');
         $purchased = DB::table('user_hint_purchases')->where('user_id', Auth::id())->pluck('hint_id')->all();
+        $hintedTasks = DB::table('user_hint_purchases')
+            ->join('task_hints', 'task_hints.id', '=', 'user_hint_purchases.hint_id')
+            ->where('user_hint_purchases.user_id', Auth::id())
+            ->whereIn('task_hints.location_task_id', $tasks->pluck('id'))
+            ->pluck('task_hints.location_task_id')
+            ->unique()
+            ->all();
 
-        return view('game.location', compact('location', 'state', 'tasks', 'progress', 'hints', 'purchased'));
+        return view('game.location', compact('location', 'state', 'tasks', 'progress', 'hints', 'purchased', 'hintedTasks'));
     }
 
     public function submitTask(Request $request, int $taskId): RedirectResponse
@@ -99,7 +106,8 @@ class GameController extends Controller
         );
 
         if ($status === 'completed') {
-            $this->rewardUser($task->reward_prestige, $task->reward_resources, 0, 'task_completed', 'location_task', $task->id);
+            $rewardPrestige = $this->taskHintUsed((int) $task->id) ? (int) floor($task->reward_prestige / 2) : (int) $task->reward_prestige;
+            $this->rewardUser($rewardPrestige, $task->reward_resources, 0, 'task_completed', 'location_task', $task->id);
             $storyMessage = $this->syncLocationCompletion($task->location_id);
             return back()->with('success', $storyMessage ?: 'Úkol splněn.');
         }
@@ -119,22 +127,18 @@ class GameController extends Controller
         }
 
         $user = Auth::user();
-        if ($user->resources < $hint->cost_resources) {
-            return back()->with('error', 'NemĂˇĹˇ dost surovin.');
-        }
 
         DB::transaction(function () use ($hint, $user) {
-            DB::table('users')->where('id', $user->id)->decrement('resources', $hint->cost_resources);
             DB::table('user_hint_purchases')->insert([
                 'user_id' => $user->id,
                 'hint_id' => $hint->id,
                 'purchased_at' => now(),
-                'cost_paid' => $hint->cost_resources,
+                'cost_paid' => 0,
             ]);
             $this->audit('hint_purchased', 'task_hint', $hint->id, $user->id);
         });
 
-        return back()->with('success', 'NĂˇpovÄ›da koupena.');
+        return back()->with('success', 'Nápověda zobrazena. Maximální prestiž za tento úkol je teď poloviční.');
     }
 
     public function anthill(): View
@@ -344,12 +348,7 @@ class GameController extends Controller
         $friendIds = DB::table('friendships')->where('user_id', Auth::id())->pluck('friend_id')->all();
         $players = DB::table('users')
             ->where('role', 'player')
-            ->where(function ($query) use ($friendIds) {
-                $query->where('status', 'active');
-                if ($friendIds) {
-                    $query->orWhereIn('id', $friendIds);
-                }
-            })
+            ->where('status', 'active')
             ->orderByDesc('prestige')
             ->get();
         $ranked = $players->values()->map(function ($player, $index) {
@@ -553,7 +552,7 @@ class GameController extends Controller
                 if (filled($location->story_completed ?? null)) {
                     session()->flash('completion_story', [
                         'title' => $location->name . ' je splněno',
-                        'image' => $location->story_image_path ?: $location->image_path,
+                        'image' => ($location->completed_image_path ?? null) ?: $location->story_image_path ?: $location->image_path,
                         'body' => $location->story_completed,
                     ]);
                 }
@@ -575,6 +574,15 @@ class GameController extends Controller
         }
         $this->audit($action, $entityType, $entityId, Auth::id(), compact('prestige', 'resources', 'level'));
         $this->syncPrestigeBadges(Auth::id());
+    }
+
+    private function taskHintUsed(int $taskId): bool
+    {
+        return DB::table('user_hint_purchases')
+            ->join('task_hints', 'task_hints.id', '=', 'user_hint_purchases.hint_id')
+            ->where('user_hint_purchases.user_id', Auth::id())
+            ->where('task_hints.location_task_id', $taskId)
+            ->exists();
     }
 
     private function audit(string $action, ?string $entityType, ?int $entityId, ?int $targetUserId = null, ?array $newValue = null): void

@@ -178,6 +178,22 @@ class QuickLaunchSeeder extends Seeder
             ],
         ];
 
+        $finalLocations = $this->finalLocationTextData();
+        $finalTaskData = $this->finalTaskTextData();
+
+        foreach ($locations as &$location) {
+            $final = $finalLocations[$location['name']] ?? null;
+            if (! $final) {
+                continue;
+            }
+
+            $location['story'] = $final['story'] ?? $location['story'];
+            $location['completed'] = $final['completed'] ?? $location['completed'];
+            $location['tooltip'] = $final['tooltip'] ?? $location['tooltip'];
+            $location['tooltip_completed'] = $final['tooltip_completed'] ?? $location['tooltip_completed'];
+        }
+        unset($location);
+
         $locationImages = [
             1 => '/assets/game/stations-v3/task-1-rohac-active-water-transparent-edgefade.png',
             2 => '/assets/game/stations-final/task-2-cervotoc-final-v2-edgefade.png',
@@ -197,6 +213,14 @@ class QuickLaunchSeeder extends Seeder
             3 => '/assets/game/story/task-3-vazka.png',
             4 => '/assets/game/story/task-4-snek.png',
             5 => '/assets/game/story/task-5-stonozka.png',
+        ];
+
+        $completedImages = [
+            1 => '/assets/game/completed/task-1-rohac-completed.png',
+            2 => '/assets/game/completed/task-2-cervotoc-completed.png',
+            3 => '/assets/game/completed/task-3-vazka-completed.png',
+            4 => '/assets/game/completed/task-4-snek-completed.png',
+            5 => '/assets/game/completed/task-5-stonozka-completed.png',
         ];
 
         $taskPdfs = [
@@ -222,6 +246,7 @@ class QuickLaunchSeeder extends Seeder
                     'reward_colony_level' => 1,
                     'image_path' => $locationImages[$location['order']],
                     'story_image_path' => $storyImages[$location['order']] ?? null,
+                    'completed_image_path' => $completedImages[$location['order']] ?? null,
                     'tooltip' => $location['tooltip'],
                     'tooltip_completed' => $location['tooltip_completed'],
                     'sort_order' => $location['order'],
@@ -257,8 +282,9 @@ class QuickLaunchSeeder extends Seeder
             $taskPayload = [
                 'type' => 'code',
                 'title' => 'Úkol ' . $location['order'] . ': ' . $location['name'],
-                'body' => $location['task'],
-                'answer_hash' => Hash::make(AnswerNormalizer::normalize($location['answer'])),
+                'body' => $finalTaskData[$location['name']]['pdf_intro'] ?? $location['task'],
+                'pdf_intro' => $finalTaskData[$location['name']]['pdf_intro'] ?? null,
+                'answer_hash' => Hash::make(AnswerNormalizer::normalize($finalTaskData[$location['name']]['answer'] ?? $location['answer'])),
                 'required_for_completion' => true,
                 'reward_prestige' => 25 + ($location['order'] * 3),
                 'reward_resources' => 8 + $location['order'],
@@ -294,8 +320,8 @@ class QuickLaunchSeeder extends Seeder
                     'sort_order' => 1,
                 ],
                 [
-                'text' => 'Když se zasekneš, zkus odpověď zapsat jednoduše a bez zdobení. Správná stopa míří k: ' . mb_strtolower($location['answer'], 'UTF-8') . '.',
-                'cost_resources' => 20,
+                'text' => '',
+                'cost_resources' => 0,
                 'created_at' => now(),
                 'updated_at' => now(),
                 ]
@@ -357,6 +383,114 @@ class QuickLaunchSeeder extends Seeder
                 );
             }
         }
+    }
+
+    private function finalLocationTextData(): array
+    {
+        $text = $this->finalTextSource();
+        $data = [];
+
+        preg_match_all('/^Stanoviště - (.+)$/mu', $text, $matches, PREG_OFFSET_CAPTURE);
+        foreach ($matches[1] as $index => [$name, $offset]) {
+            $sectionStart = $matches[0][$index][1] + strlen($matches[0][$index][0]);
+            $nextSection = $matches[0][$index + 1][1] ?? null;
+            $cipherSection = strpos($text, 'ŠIFRY', $sectionStart);
+            $sectionEnd = $nextSection ?? ($cipherSection === false ? strlen($text) : $cipherSection);
+            $section = substr($text, $sectionStart, $sectionEnd - $sectionStart);
+
+            $data[trim($name)] = [
+                'tooltip' => $this->extractSectionPart($section, 'Popis odemčené lokace:', 'Popis po splnění lokace:'),
+                'tooltip_completed' => $this->extractSectionPart($section, 'Popis po splnění lokace:', 'Před splněním:'),
+                'story' => $this->extractSectionPart($section, 'Před splněním:', 'Po splnění:'),
+                'completed' => $this->extractCompletedStory($section),
+            ];
+        }
+
+        return $data;
+    }
+
+    private function finalTaskTextData(): array
+    {
+        $text = $this->finalTextSource();
+        $start = strpos($text, 'ŠIFRY');
+        if ($start === false) {
+            return [];
+        }
+
+        $section = substr($text, $start);
+        $names = ['Roháč', 'Červotoč', 'Vážka', 'Šnek', 'Stonožka', 'Vodoměrka', 'Kobylka', 'Včela', 'Beruška', 'Světluška'];
+        $data = [];
+
+        foreach ($names as $index => $name) {
+            $pattern = '/^' . preg_quote($name, '/') . '\s*$/mu';
+            if (! preg_match($pattern, $section, $match, PREG_OFFSET_CAPTURE)) {
+                continue;
+            }
+
+            $blockStart = $match[0][1] + strlen($match[0][0]);
+            $blockEnd = strlen($section);
+            foreach (array_slice($names, $index + 1) as $nextName) {
+                if (preg_match('/^' . preg_quote($nextName, '/') . '\s*$/mu', $section, $next, PREG_OFFSET_CAPTURE, $blockStart)) {
+                    $blockEnd = $next[0][1];
+                    break;
+                }
+            }
+
+            $block = trim(substr($section, $blockStart, $blockEnd - $blockStart));
+            $answer = null;
+            if (preg_match('/HESLO:\s*(.+)$/mu', $block, $answerMatch)) {
+                $answer = trim(preg_replace('/\s*\([^)]*\)\s*$/u', '', $answerMatch[1]));
+                $answer = $answer === '' ? null : $answer;
+                $block = trim(preg_replace('/\n?\s*HESLO:\s*.+$/mus', '', $block));
+            }
+
+            $data[$name] = [
+                'pdf_intro' => $block,
+                'answer' => $answer,
+            ];
+        }
+
+        return $data;
+    }
+
+    private function finalTextSource(): string
+    {
+        $path = database_path('seeders/data/prazdninovka-2026-texty.txt');
+
+        $text = is_file($path) ? file_get_contents($path) : '';
+
+        return ltrim(str_replace(["\r\n", "\r"], "\n", $text), "\xEF\xBB\xBF");
+    }
+
+    private function extractSectionPart(string $section, string $from, string $to): ?string
+    {
+        $start = strpos($section, $from);
+        if ($start === false) {
+            return null;
+        }
+
+        $start += strlen($from);
+        $end = strpos($section, $to, $start);
+        $value = $end === false ? substr($section, $start) : substr($section, $start, $end - $start);
+
+        return $this->cleanImportedText($value);
+    }
+
+    private function extractCompletedStory(string $section): ?string
+    {
+        if (! preg_match('/Po splnění:\s*(?:->[^\n]*\n)?(.+)$/mus', $section, $match)) {
+            return null;
+        }
+
+        return $this->cleanImportedText($match[1]);
+    }
+
+    private function cleanImportedText(?string $text): ?string
+    {
+        $text = trim((string) $text);
+        $text = trim($text, " \t\n\r\0\x0B„“\"");
+
+        return $text === '' ? null : $text;
     }
 
     private function clearOldLocationContent(): void

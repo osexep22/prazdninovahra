@@ -19,6 +19,12 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
+        if (! app()->environment('local')) {
+            app(QuickLaunchSeeder::class)->seedContent(preservePlayerData: true);
+
+            return;
+        }
+
         DB::table('users')->insert([
             [
                 'display_name' => 'Admin',

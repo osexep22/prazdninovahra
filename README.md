@@ -15,10 +15,7 @@ V tomto workspace je kvuli lokalni PHP instalaci pripraven `php.ini`, ktery zapi
 7. `npm.cmd run dev`
 8. `php -c .\php.ini artisan serve`
 
-Testovaci prihlaseni:
-
-- admin: `admin` / `admin123`
-- hraci: `hrac1` az `hrac5` / `heslo123`
+Testovaci prihlaseni jsou urcena jen pro lokalni vyvoj v `APP_ENV=local`. Produkcni prostredi nesmi pouzivat zname demo prihlasovaci udaje.
 
 Testovaci kody ukolu na Palouku jsou shodne se slugem lokace, napriklad `startovni-kamen`. Kody specialnich ukolu budov maji tvar `slug-budovy-1`, napriklad `malirska-komora-1`.
 
@@ -28,7 +25,9 @@ Testovaci kody ukolu na Palouku jsou shodne se slugem lokace, napriklad `startov
 - V `.env` nastavit produkcni `APP_KEY`, `APP_URL`, `DB_CONNECTION=mysql`, MySQL host, databazi, uzivatele a heslo.
 - Na hostingu musi byt PHP 8.2+ a extensions `pdo_mysql`, `mbstring`, `openssl`, `fileinfo`, `curl`, `zip`, `xml`, `ctype`, `json`, `tokenizer`.
 - Spustit `composer install --no-dev --optimize-autoloader`.
-- Spustit `php artisan migrate --seed`.
+- Spustit `php artisan migrate --force`.
+- Herni obsah bez zasahu do hracu obnovit pres `php artisan db:seed --class=ContentRefreshSeeder --force`.
+- Produkcni admin ucet nevytvaret ze znamych demo prihlasovacich udaju.
 - Buildnout assets pres `npm run build` a nahrat vystup.
 - E-maily jsou zatim vypnute, zpravy zustavaji uvnitr aplikace.
 

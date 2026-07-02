@@ -89,10 +89,19 @@
 @foreach($audit as $item)<div class="card" style="margin-bottom:8px">{{ $item->created_at }} - {{ $item->action }}</div>@endforeach
 <h2>Smazání hráče</h2>
 <div class="panel">
-    <form method="post" action="/admin/hraci/{{ $player->id }}" onsubmit="return confirm('Opravdu smazat hráče {{ $player->display_name }}? Tahle akce smaže i jeho postup, zprávy a budovy.');">
+    <form method="post" action="/admin/hraci/{{ $player->id }}" data-confirm-delete="Opravdu smazat hráče {{ $player->display_name }}? Tahle akce smaže i jeho postup, zprávy a budovy.">
         @csrf @method('DELETE')
         <label><input type="checkbox" name="confirm_delete" value="1" style="width:auto"> Potvrzuji smazání hráče.</label>
         <p><button>Smazat hráče</button></p>
     </form>
 </div>
+<script>
+document.querySelectorAll('[data-confirm-delete]').forEach((form) => {
+    form.addEventListener('submit', (event) => {
+        if (!confirm(form.dataset.confirmDelete || 'Opravdu smazat?')) {
+            event.preventDefault();
+        }
+    });
+});
+</script>
 @endsection

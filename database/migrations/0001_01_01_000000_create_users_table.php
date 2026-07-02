@@ -21,7 +21,7 @@ return new class extends Migration
             $table->string('status')->default('pending_approval');
             $table->string('registration_source')->nullable();
             $table->unsignedInteger('colony_level')->default(1);
-            $table->integer('resources')->default(80);
+            $table->integer('resources')->default(0);
             $table->integer('prestige')->default(0);
             $table->timestamp('last_customization_change_at')->nullable();
             $table->timestamp('email_verified_at')->nullable();

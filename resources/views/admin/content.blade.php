@@ -72,6 +72,7 @@
             <div class="grid">
                 <div><label>Nahrát nové PNG stanoviště</label><input name="image" type="file" accept="image/png,image/jpeg,image/webp"><label>Vybrat uložený obrázek stanoviště</label><select name="existing_image_path"><option value="">Ponechat aktuální</option>@foreach($imageFiles as $file)<option value="{{ $file->public_path }}">{{ $file->original_name }}</option>@endforeach</select><p class="small">{{ $location->image_path }}</p></div>
                 <div><label>Nahrát nový obrázek v detailu</label><input name="story_image" type="file" accept="image/png,image/jpeg,image/webp"><label>Vybrat uložený obrázek v detailu</label><select name="existing_story_image_path"><option value="">Ponechat aktuální</option>@foreach($imageFiles as $file)<option value="{{ $file->public_path }}">{{ $file->original_name }}</option>@endforeach</select><p class="small">{{ $location->story_image_path }}</p></div>
+                <div><label>Nahrát obrázek po splnění</label><input name="completed_image" type="file" accept="image/png,image/jpeg,image/webp"><label>Vybrat uložený obrázek po splnění</label><select name="existing_completed_image_path"><option value="">Ponechat aktuální</option>@foreach($imageFiles as $file)<option value="{{ $file->public_path }}">{{ $file->original_name }}</option>@endforeach</select><p class="small">{{ $location->completed_image_path ?? '' }}</p></div>
             </div>
             <p class="row"><button class="primary">Uložit lokaci</button><a class="btn" href="/admin/nahled/lokace/{{ $location->slug }}">Náhled</a></p>
         </form>
@@ -80,6 +81,7 @@
 
 <h2>Úkoly z palouku</h2>
 @foreach($tasks as $task)
+    @php($hint = ($taskHints[$task->id] ?? collect())->first())
     <details class="card" style="margin-bottom:10px">
         <summary><b>{{ $task->location_name }}:</b> {{ $task->title }}</summary>
         <form method="post" action="/admin/obsah/ukoly/{{ $task->id }}" enctype="multipart/form-data">
@@ -93,6 +95,10 @@
             </div>
             <label>Text úkolu</label>
             <textarea name="body" rows="5" required>{{ $task->body }}</textarea>
+            <label>Doplňující text nad tlačítkem Stáhnout PDF</label>
+            <textarea name="pdf_intro" rows="3">{{ $task->pdf_intro ?? '' }}</textarea>
+            <label>Nápověda</label>
+            <textarea name="hint_text" rows="3">{{ $hint->text ?? '' }}</textarea>
             <label>Nová správná odpověď / kód (prázdné = neměnit)</label>
             <input name="answer">
             <label><input name="required_for_completion" type="checkbox" value="1" style="width:auto" @checked($task->required_for_completion)> Povinné pro splnění stanoviště</label>

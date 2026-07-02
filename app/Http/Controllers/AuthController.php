@@ -44,14 +44,6 @@ class AuthController extends Controller
         if (Auth::attempt(['username' => $username, 'password' => $credentials['password']])) {
             $request->session()->regenerate();
 
-            if (Auth::user()->status === 'blocked') {
-                Auth::logout();
-                $request->session()->invalidate();
-                $request->session()->regenerateToken();
-
-                return redirect('/login')->withErrors(['username' => 'Účet je zablokovaný.']);
-            }
-
             return redirect()->intended('/palouk');
         }
 
@@ -129,7 +121,7 @@ class AuthController extends Controller
             'status' => 'pending_approval',
             'role' => 'player',
             'colony_level' => 1,
-            'resources' => 80,
+            'resources' => 0,
             'prestige' => 0,
         ]);
 

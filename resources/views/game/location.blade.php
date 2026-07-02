@@ -5,7 +5,9 @@
     $storyText = $state === 'completed' && filled($location->story_completed ?? null)
         ? $location->story_completed
         : $location->story;
-    $locationImage = $location->story_image_path ?: $location->image_path ?: ($state === 'completed' ? $location->svg_completed : $location->svg_available);
+    $locationImage = $state === 'completed'
+        ? (($location->completed_image_path ?? null) ?: $location->story_image_path ?: $location->image_path ?: $location->svg_completed)
+        : ($location->story_image_path ?: $location->image_path ?: $location->svg_available);
 @endphp
 
 @if($completionStory)
@@ -43,12 +45,29 @@
 
 <h2 class="task-list-title">Úkoly</h2>
 @foreach($tasks as $task)
-    @php $taskCompleted = ($progress[$task->id] ?? '') === 'completed'; @endphp
+    @php
+        $taskCompleted = ($progress[$task->id] ?? '') === 'completed';
+        $hintUsed = in_array($task->id, $hintedTasks ?? [], true);
+        $effectivePrestige = $hintUsed ? (int) floor($task->reward_prestige / 2) : (int) $task->reward_prestige;
+    @endphp
     <div class="card" style="margin-top:12px">
         <h3>{{ $task->title }} @if($taskCompleted) ✓ @endif</h3>
+        <div class="task-reward-row">
+            <span>Odměna za úkol:</span>
+            @if($hintUsed)
+                <span class="prestige-reduced"><s>{{ $task->reward_prestige }}</s> <b>{{ $effectivePrestige }}</b> prestiž</span>
+                <span>{{ $task->reward_resources }} surovin</span>
+            @else
+                <span><b>{{ $task->reward_prestige }}</b> prestiž</span>
+                <span>{{ $task->reward_resources }} surovin</span>
+            @endif
+        </div>
         <p>{!! nl2br(e($task->body)) !!}</p>
 
         @if($task->pdf_path)
+            @if(($task->pdf_intro ?? null) && trim((string) $task->pdf_intro) !== trim((string) $task->body))
+                <p class="small">{!! nl2br(e($task->pdf_intro)) !!}</p>
+            @endif
             <p><a class="btn" href="{{ $task->pdf_path }}" download>Stáhnout PDF se zadáním</a></p>
         @endif
 
@@ -68,11 +87,11 @@
         <h3>Nápovědy</h3>
         @foreach($visibleHints as $hint)
             @if(in_array($hint->id, $purchased))
-                <p class="small">{{ $hint->text }}</p>
+                <p class="small hint-revealed">{{ $hint->text }}</p>
             @else
-                <form method="post" action="/hints/{{ $hint->id }}/buy" class="inline">
+                <form method="post" action="/hints/{{ $hint->id }}/buy" class="inline" onsubmit="return confirm('Použití nápovědy sníží maximální prestiž získanou za tento úkol na polovinu.\n\nOpravdu chceš zobrazit nápovědu?');">
                     @csrf
-                    <button>Koupit za {{ $hint->cost_resources }} surovin</button>
+                    <button>Nápověda</button>
                 </form>
             @endif
         @endforeach
