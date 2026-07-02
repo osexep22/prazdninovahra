@@ -298,17 +298,20 @@ class GameController extends Controller
         $building = DB::table('buildings')->find($data['building_id']);
         abort_unless($building, 404);
 
-        if ($building->min_colony_level > $user->colony_level || $user->resources < $building->cost_resources) {
-            return back()->with('error', 'Budovu zatĂ­m nejde postavit.');
+        if ($building->min_colony_level > $user->colony_level) {
+            return back()->with('error', 'Budovu zatím nejde postavit. Potřebuješ úroveň kolonie ' . $building->min_colony_level . ', ale teď máš úroveň ' . $user->colony_level . '.');
+        }
+        if ($user->resources < $building->cost_resources) {
+            return back()->with('error', 'Budovu zatím nejde postavit. Stojí ' . $building->cost_resources . ' surovin, ale teď máš jen ' . $user->resources . '.');
         }
         if (DB::table('user_buildings')->where(['user_id' => $user->id, 'building_id' => $building->id])->exists()) {
-            return back()->with('error', 'KaĹľdĂ˝ typ budovy lze postavit jen jednou.');
+            return back()->with('error', 'Tento typ budovy už v mraveništi máš. Každý typ budovy lze postavit jen jednou.');
         }
         if (! DB::table('user_building_slots')->where(['user_id' => $user->id, 'building_slot_id' => $data['slot_id']])->exists()) {
-            return back()->with('error', 'Slot nenĂ­ koupenĂ˝.');
+            return back()->with('error', 'Tahle komůrka ještě není koupená. Nejdřív ji otevři nebo rozšiř mraveniště.');
         }
         if (DB::table('user_buildings')->where(['user_id' => $user->id, 'building_slot_id' => $data['slot_id']])->exists()) {
-            return back()->with('error', 'Slot je obsazenĂ˝.');
+            return back()->with('error', 'Tahle komůrka už je obsazená jinou budovou.');
         }
 
         DB::transaction(function () use ($user, $building, $data) {
