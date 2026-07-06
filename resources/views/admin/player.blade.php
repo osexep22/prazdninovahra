@@ -36,6 +36,8 @@
                 <option value="player" @selected($player->role==='player')>Hráč</option>
                 <option value="admin" @selected($player->role==='admin')>Admin</option>
             </select></label>
+            <label><input type="checkbox" name="is_test" value="1" style="width:auto" @checked($player->is_test ?? false)> Testovací účet</label>
+            <p class="small muted">Testovací účet není v žebříčku a automaticky nezískává odznáčky, aby nebral Top 10 místa hráčům.</p>
             <p><button class="primary">Uložit status a roli</button></p>
         </form>
     </div>

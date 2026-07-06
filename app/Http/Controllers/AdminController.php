@@ -118,13 +118,19 @@ class AdminController extends Controller
         $data = $request->validate([
             'status' => ['required', 'in:pending_approval,active,blocked'],
             'role' => ['required', 'in:player,admin'],
+            'is_test' => ['nullable', 'boolean'],
         ]);
 
-        DB::table('users')->where('id', $id)->update([
+        $payload = [
             'status' => $data['status'],
             'role' => $data['role'],
             'updated_at' => now(),
-        ]);
+        ];
+        if (DB::getSchemaBuilder()->hasColumn('users', 'is_test')) {
+            $payload['is_test'] = $request->boolean('is_test');
+        }
+
+        DB::table('users')->where('id', $id)->update($payload);
         $this->audit('admin_status_role_changed', 'user', $id, $id, $data);
 
         return back()->with('success', 'Stav a role hráče upraveny.');

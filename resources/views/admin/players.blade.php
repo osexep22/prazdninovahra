@@ -12,6 +12,7 @@
         <th>Zdroj</th>
         <th>Ověřovací kód</th>
         <th>Stav</th>
+        <th>Typ</th>
         <th>Prestiž</th>
         <th></th>
     </tr>
@@ -34,6 +35,13 @@
                 @endif
             </td>
             <td>{{ $player->status }}</td>
+            <td>
+                @if($player->is_test ?? false)
+                    <span class="small">testovací</span>
+                @else
+                    <span class="small muted">ostrý</span>
+                @endif
+            </td>
             <td>{{ $player->prestige }}</td>
             <td><a href="/admin/hraci/{{ $player->id }}">detail</a></td>
         </tr>

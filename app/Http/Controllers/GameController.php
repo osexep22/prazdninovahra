@@ -494,11 +494,13 @@ class GameController extends Controller
     public function leaderboard(): View
     {
         $friendIds = DB::table('friendships')->where('user_id', Auth::id())->pluck('friend_id')->all();
-        $players = DB::table('users')
+        $playersQuery = DB::table('users')
             ->where('role', 'player')
-            ->where('status', 'active')
-            ->orderByDesc('prestige')
-            ->get();
+            ->where('status', 'active');
+        if (Schema::hasColumn('users', 'is_test')) {
+            $playersQuery->where('is_test', false);
+        }
+        $players = $playersQuery->orderByDesc('prestige')->get();
         $ranked = $players->values()->map(function ($player, $index) {
             $player->rank = $index + 1;
             return $player;
@@ -693,7 +695,14 @@ class GameController extends Controller
                 $rewardPrestige = $this->economy->locationPrestigeAfterHint($location, Auth::id());
                 $this->rewardUser($rewardPrestige, $location->reward_resources, $location->reward_colony_level, 'location_completed', 'location', $locationId);
                 $this->awardBadge('lokace-' . $location->slug, Auth::id(), 'location', $locationId);
-                $completedCount = DB::table('user_location_progress')->where(['location_id' => $locationId, 'status' => 'completed'])->count();
+                $completedCountQuery = DB::table('user_location_progress')
+                    ->join('users', 'users.id', '=', 'user_location_progress.user_id')
+                    ->where('user_location_progress.location_id', $locationId)
+                    ->where('user_location_progress.status', 'completed');
+                if (Schema::hasColumn('users', 'is_test')) {
+                    $completedCountQuery->where('users.is_test', false);
+                }
+                $completedCount = $completedCountQuery->count();
                 if ($completedCount <= 10) {
                     $this->awardBadge('top-10-' . $location->slug, Auth::id(), 'location', $locationId);
                 }
@@ -743,6 +752,10 @@ class GameController extends Controller
 
     private function awardBadge(string $slug, int $userId, ?string $entityType = null, ?int $entityId = null): void
     {
+        if ($this->isTestUser($userId)) {
+            return;
+        }
+
         $badge = DB::table('badges')->where('slug', $slug)->first();
         if (! $badge) {
             return;
@@ -766,6 +779,15 @@ class GameController extends Controller
             'slug' => $slug,
             'prestige_bonus' => $badge->prestige_bonus,
         ]);
+    }
+
+    private function isTestUser(int $userId): bool
+    {
+        if (! Schema::hasColumn('users', 'is_test')) {
+            return false;
+        }
+
+        return (bool) DB::table('users')->where('id', $userId)->value('is_test');
     }
 
     private function findOrCreateThread(string $recipient): object

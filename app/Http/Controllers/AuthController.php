@@ -104,6 +104,7 @@ class AuthController extends Controller
         ]);
 
         $username = $this->usernameFromDisplayName($data['display_name']);
+        $isTestAccount = strtoupper(trim($data['admin_contact_code'])) === 'XXTEST';
 
         if (User::where('username', $username)->exists()) {
             return back()
@@ -111,7 +112,7 @@ class AuthController extends Controller
                 ->withInput();
         }
 
-        $user = User::create([
+        $userPayload = [
             'display_name' => $data['display_name'],
             'name' => $data['display_name'],
             'username' => $username,
@@ -125,7 +126,12 @@ class AuthController extends Controller
             'colony_level' => 1,
             'resources' => 0,
             'prestige' => 0,
-        ]);
+        ];
+        if (DB::getSchemaBuilder()->hasColumn('users', 'is_test')) {
+            $userPayload['is_test'] = $isTestAccount;
+        }
+
+        $user = User::create($userPayload);
 
         Auth::login($user);
         $request->session()->regenerate();

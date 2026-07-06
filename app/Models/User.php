@@ -25,6 +25,7 @@ class User extends Authenticatable
         'username',
         'role',
         'status',
+        'is_test',
         'registration_source',
         'friend_code',
         'ant_avatar_config',
@@ -61,6 +62,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'last_customization_change_at' => 'datetime',
+            'is_test' => 'boolean',
             'password' => 'hashed',
         ];
     }
