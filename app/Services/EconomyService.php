@@ -79,7 +79,25 @@ class EconomyService
 
     public function availableExpansionTargets(int $capacity): array
     {
-        return array_values(array_filter($this->expansionTargets(), fn (int $target) => $target > $capacity));
+        $nextTarget = $this->nextExpansionTarget($capacity);
+
+        return $nextTarget ? [$nextTarget] : [];
+    }
+
+    public function nextExpansionTarget(int $capacity): ?int
+    {
+        foreach ($this->expansionTargets() as $target) {
+            if ($target > $capacity) {
+                return $target;
+            }
+        }
+
+        return null;
+    }
+
+    public function canBuyExpansion(int $capacity, int $target): bool
+    {
+        return $this->nextExpansionTarget($capacity) === $target;
     }
 
     public function expansionCost(int $target): int
@@ -95,10 +113,12 @@ class EconomyService
             ->pluck('id');
 
         foreach ($slotIds as $slotId) {
-            DB::table('user_building_slots')->updateOrInsert(
-                ['user_id' => $userId, 'building_slot_id' => $slotId],
-                ['purchased_at' => now(), 'cost_paid' => $costPaid]
-            );
+            DB::table('user_building_slots')->insertOrIgnore([
+                'user_id' => $userId,
+                'building_slot_id' => $slotId,
+                'purchased_at' => now(),
+                'cost_paid' => $costPaid,
+            ]);
         }
     }
 }

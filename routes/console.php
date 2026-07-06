@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
+use App\Services\EconomyService;
 
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
@@ -203,3 +204,164 @@ Artisan::command('game:import-content {path} {--force : Really replace productio
 
     return 0;
 })->purpose('Import game content, wipe player data, and create the production admin');
+
+Artisan::command('anthill:repair-expansion-skips {--apply : Actually repair affected players}', function () {
+    $apply = (bool) $this->option('apply');
+    $economy = app(EconomyService::class);
+    $initialRooms = $economy->setting('anthill.initial_rooms');
+    $expectedTargets = $economy->expansionTargets();
+    $slotIdsToRemove = DB::table('building_slots')
+        ->where('slot_number', '>', $initialRooms)
+        ->pluck('id')
+        ->all();
+
+    $expansionCosts = collect($expectedTargets)
+        ->mapWithKeys(fn (int $target) => [$target => $economy->expansionCost($target)])
+        ->all();
+
+    $players = DB::table('users')
+        ->whereExists(function ($query) {
+            $query->selectRaw('1')
+                ->from('audit_logs')
+                ->whereColumn('audit_logs.target_user_id', 'users.id')
+                ->where('audit_logs.action', 'anthill_expansion_purchased');
+        })
+        ->orderBy('display_name')
+        ->get(['id', 'display_name', 'username', 'resources']);
+
+    $candidates = [];
+
+    foreach ($players as $player) {
+        $alreadyRepaired = DB::table('audit_logs')
+            ->where('target_user_id', $player->id)
+            ->where('action', 'anthill_expansion_sequence_repair')
+            ->exists();
+        if ($alreadyRepaired) {
+            continue;
+        }
+
+        $purchases = DB::table('audit_logs')
+            ->where('target_user_id', $player->id)
+            ->where('action', 'anthill_expansion_purchased')
+            ->orderBy('created_at')
+            ->orderBy('id')
+            ->get();
+        $targets = $purchases->map(fn (object $purchase) => (int) $purchase->entity_id)->values()->all();
+        $expectedPrefix = array_slice($expectedTargets, 0, count($targets));
+        if ($targets === $expectedPrefix) {
+            continue;
+        }
+
+        $builtBuildings = DB::table('user_buildings')->where('user_id', $player->id)->count();
+        $capacity = (int) DB::table('user_building_slots')
+            ->join('building_slots', 'building_slots.id', '=', 'user_building_slots.building_slot_id')
+            ->where('user_building_slots.user_id', $player->id)
+            ->count();
+        if ($capacity <= $initialRooms) {
+            continue;
+        }
+
+        $ownedSlotNumbers = DB::table('user_building_slots')
+            ->join('building_slots', 'building_slots.id', '=', 'user_building_slots.building_slot_id')
+            ->where('user_building_slots.user_id', $player->id)
+            ->orderBy('building_slots.slot_number')
+            ->pluck('building_slots.slot_number')
+            ->all();
+        $refund = $purchases->sum(function (object $purchase) use ($expansionCosts) {
+            $payload = json_decode((string) $purchase->new_value, true);
+            $resources = (int) ($payload['resources'] ?? 0);
+            if ($resources < 0) {
+                return abs($resources);
+            }
+
+            return $expansionCosts[(int) $purchase->entity_id] ?? 0;
+        });
+
+        $candidates[] = [
+            'player' => $player,
+            'targets' => $targets,
+            'capacity' => $capacity,
+            'owned_slot_numbers' => $ownedSlotNumbers,
+            'built_buildings' => $builtBuildings,
+            'refund' => $refund,
+        ];
+    }
+
+    if ($candidates === []) {
+        $this->info('Nenalezen žádný hráč s přeskočeným rozšířením.');
+
+        return 0;
+    }
+
+    $this->table(
+        ['ID', 'Hráč', 'Login', 'Kapacita', 'Nákupy', 'Budovy', 'Vrátit surovin', 'Akce'],
+        array_map(function (array $candidate) use ($initialRooms) {
+            return [
+                $candidate['player']->id,
+                $candidate['player']->display_name,
+                $candidate['player']->username,
+                $candidate['capacity'],
+                implode(' -> ', $candidate['targets']),
+                $candidate['built_buildings'],
+                $candidate['refund'],
+                $candidate['built_buildings'] > 0 ? 'PŘESKOČIT: má postavené budovy' : 'vrátit na ' . $initialRooms,
+            ];
+        }, $candidates)
+    );
+
+    if (! $apply) {
+        $this->warn('Dry-run: nic nebylo změněno. Pro opravu spusť znovu s --apply.');
+
+        return 0;
+    }
+
+    foreach ($candidates as $candidate) {
+        if ($candidate['built_buildings'] > 0) {
+            continue;
+        }
+
+        DB::transaction(function () use ($candidate, $initialRooms, $slotIdsToRemove) {
+            $player = $candidate['player'];
+            $freshPlayer = DB::table('users')->where('id', $player->id)->lockForUpdate()->first();
+            if (! $freshPlayer) {
+                return;
+            }
+            if (DB::table('audit_logs')->where('target_user_id', $player->id)->where('action', 'anthill_expansion_sequence_repair')->exists()) {
+                return;
+            }
+            if (DB::table('user_buildings')->where('user_id', $player->id)->exists()) {
+                return;
+            }
+
+            DB::table('user_building_slots')
+                ->where('user_id', $player->id)
+                ->whereIn('building_slot_id', $slotIdsToRemove)
+                ->delete();
+            DB::table('users')->where('id', $player->id)->increment('resources', $candidate['refund']);
+            DB::table('audit_logs')->insert([
+                'actor_user_id' => null,
+                'target_user_id' => $player->id,
+                'action' => 'anthill_expansion_sequence_repair',
+                'entity_type' => 'user',
+                'entity_id' => $player->id,
+                'old_value' => json_encode([
+                    'capacity' => $candidate['capacity'],
+                    'owned_slot_numbers' => $candidate['owned_slot_numbers'],
+                    'expansion_purchases' => $candidate['targets'],
+                    'resources' => $freshPlayer->resources,
+                ]),
+                'new_value' => json_encode([
+                    'capacity' => $initialRooms,
+                    'refund_resources' => $candidate['refund'],
+                    'resources' => $freshPlayer->resources + $candidate['refund'],
+                ]),
+                'note' => 'Jednorázová oprava přeskočeného rozšíření mraveniště.',
+                'created_at' => now(),
+            ]);
+        });
+    }
+
+    $this->info('Oprava dokončena. Opakované spuštění je idempotentní díky audit záznamu anthill_expansion_sequence_repair.');
+
+    return 0;
+})->purpose('Dry-run or repair anthill expansion purchases that skipped required steps');

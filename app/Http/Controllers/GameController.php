@@ -285,6 +285,14 @@ class GameController extends Controller
         if ($rooms <= $capacity) {
             return back();
         }
+        if (! $this->economy->canBuyExpansion($capacity, $rooms)) {
+            $nextTarget = $this->economy->nextExpansionTarget($capacity);
+            $message = $nextTarget
+                ? 'Mraveniště je potřeba rozšiřovat postupně. Teď můžeš rozšířit jen na ' . $nextTarget . ' komůrek.'
+                : 'Mraveniště už má největší dostupné rozšíření.';
+
+            return back()->with('error', $message);
+        }
 
         $cost = $this->economy->expansionCost($rooms);
         if ($user->resources < $cost) {
