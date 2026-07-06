@@ -213,6 +213,9 @@ class QuickLaunchSeeder extends Seeder
             3 => '/assets/game/story/task-3-vazka.png',
             4 => '/assets/game/story/task-4-snek.png',
             5 => '/assets/game/story/task-5-stonozka.png',
+            6 => '/assets/game/story/task-6-vodomerka.png',
+            8 => '/assets/game/story/task-8-vcela.png',
+            10 => '/assets/game/story/task-10-kobylka.png',
         ];
 
         $completedImages = [
@@ -221,6 +224,9 @@ class QuickLaunchSeeder extends Seeder
             3 => '/assets/game/completed/task-3-vazka-completed.png',
             4 => '/assets/game/completed/task-4-snek-completed.png',
             5 => '/assets/game/completed/task-5-stonozka-completed.png',
+            6 => '/assets/game/completed/task-6-vodomerka-completed.png',
+            8 => '/assets/game/completed/task-8-vcela-completed.png',
+            10 => '/assets/game/completed/task-10-kobylka-completed.png',
         ];
 
         $taskPdfs = [
