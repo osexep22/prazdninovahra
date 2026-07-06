@@ -25,11 +25,7 @@
         <div class="panel auth-card">
             <div class="login-title">
                 <h1>Přihlášení</h1>
-                <button class="help-dot" type="button" aria-label="{{ $loginHelpTitle }}">?</button>
-                <div class="help-popover">
-                    <b>{{ $loginHelpTitle }}</b>
-                    <p>{!! nl2br(e($loginHelpText)) !!}</p>
-                </div>
+                <button class="help-dot" type="button" aria-label="{{ $loginHelpTitle }}" data-login-help-open>?</button>
             </div>
             @if($errors->any()) <div class="flash err">{{ $errors->first() }}</div> @endif
             <form method="post" action="/login" autocomplete="off">
@@ -48,4 +44,32 @@
         <a href="https://krucemburk.shm.cz/" target="_blank" rel="noopener">SHM Krucemburk</a>
     </div>
 </div>
+
+<div class="modal-backdrop" id="login-help-modal" hidden>
+    <div class="modal-window story-window" role="dialog" aria-modal="true" aria-labelledby="login-help-title">
+        <div class="help-modal-title">
+            <h2 id="login-help-title">{{ $loginHelpTitle }}</h2>
+            <button class="icon-close" type="button" aria-label="Zavřít" data-login-help-close>×</button>
+        </div>
+        <p>{!! nl2br(e($loginHelpText)) !!}</p>
+        <p><button class="primary" type="button" data-login-help-close>Rozumím</button></p>
+    </div>
+</div>
+
+<script>
+(() => {
+    const modal = document.getElementById('login-help-modal');
+    const open = () => modal?.removeAttribute('hidden');
+    const close = () => modal?.setAttribute('hidden', 'hidden');
+
+    document.querySelector('[data-login-help-open]')?.addEventListener('click', open);
+    document.querySelectorAll('[data-login-help-close]').forEach(button => button.addEventListener('click', close));
+    modal?.addEventListener('click', event => {
+        if (event.target === modal) close();
+    });
+    document.addEventListener('keydown', event => {
+        if (event.key === 'Escape') close();
+    });
+})();
+</script>
 @endsection

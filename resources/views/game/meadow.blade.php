@@ -23,14 +23,20 @@
 @endif
 
 <div id="floating-tooltip" class="floating-tooltip"></div>
+<div class="modal-backdrop" id="welcome-help-modal" @if(!$showOnboarding) hidden @endif data-show-onboarding="{{ $showOnboarding ? '1' : '0' }}">
+    <div class="modal-window story-window" role="dialog" aria-modal="true" aria-labelledby="welcome-help-title">
+        <div class="help-modal-title">
+            <h2 id="welcome-help-title">{{ $welcomeTitle }}</h2>
+            <button class="icon-close" type="button" aria-label="Zavřít" data-welcome-help-close>×</button>
+        </div>
+        <p>{!! nl2br(e($welcomeText)) !!}</p>
+        <p><button class="primary" type="button" data-welcome-help-close>{{ $showOnboarding ? 'Pokračovat' : 'Rozumím' }}</button></p>
+    </div>
+</div>
 @if($showOnboarding)
-    <div class="onboarding-backdrop" data-step="1">
+    <div class="onboarding-backdrop" data-step="2" hidden>
         <div class="onboarding-card">
-            <div class="onboarding-step active" data-step="1">
-                <h2>{{ $welcomeTitle }}</h2>
-                <p>{!! nl2br(e($welcomeText)) !!}</p>
-            </div>
-            <div class="onboarding-step" data-step="2">
+            <div class="onboarding-step active" data-step="2">
                 <h2>Toto je Palouk</h2>
                 <p>Tady začíná tvoje výprava. Hledej viditelná stanoviště na mapě, najeď na ně pro nápovědu a kliknutím otevři úkol.</p>
             </div>
@@ -56,18 +62,6 @@
         <h1>Palouk</h1>
         <button class="title-help" type="button" aria-label="Co je palouk?" data-palouk-help-open>?</button>
         <p>Najdi některé ze stanovišť na palouku a klikni na něj. Když si nejsi jistý, nápověda ti dostupná místa zvýrazní žlutým kroužkem. Když si nebudeš vědět rady, napiš na shmhra2025@gmail.com.</p>
-    </div>
-    <div class="modal-backdrop spotlight-backdrop" id="palouk-help-modal" hidden>
-        <div class="modal-window">
-            <div class="help-modal-title">
-                <h2>Co je Palouk?</h2>
-                <button class="icon-close" type="button" aria-label="Zavřít" data-palouk-help-close>×</button>
-            </div>
-            <p>Palouk je mapa příběhu. Najdi viditelné stanoviště, přečti si krátkou nápovědu a kliknutím otevři úkol.</p>
-            <p>Dostupná stanoviště jsou právě zvýrazněná žlutým pulzujícím kroužkem. Na mobilu první klepnutí ukáže popis a druhé klepnutí otevře úkol.</p>
-            <p>Když si nebudeš vědět rady nebo se něco nebude chovat správně, napiš na <a href="mailto:shmhra2025@gmail.com">shmhra2025@gmail.com</a>.</p>
-            <p><button class="primary" type="button" data-palouk-help-close>Rozumím</button></p>
-        </div>
     </div>
     <div class="meadow-board">
         <div class="meadow-map">
@@ -139,34 +133,40 @@
         });
     }
 
-    const paloukHelpModal = document.getElementById('palouk-help-modal');
+    const welcomeHelpModal = document.getElementById('welcome-help-modal');
+    let startGuideAfterWelcome = welcomeHelpModal?.dataset.showOnboarding === '1';
     const highlightStations = () => meadowMap?.classList.add('highlight-stations');
     const unhighlightStations = () => {
-        if (paloukHelpModal?.hasAttribute('hidden')) {
+        if (welcomeHelpModal?.hasAttribute('hidden')) {
             meadowMap?.classList.remove('highlight-stations');
         }
     };
-    const openPaloukHelp = () => {
+    const openWelcomeHelp = (continueToGuide = false) => {
+        startGuideAfterWelcome = continueToGuide;
         meadowMap?.classList.add('highlight-stations');
-        paloukHelpModal?.removeAttribute('hidden');
+        welcomeHelpModal?.removeAttribute('hidden');
     };
-    const closePaloukHelp = () => {
-        paloukHelpModal?.setAttribute('hidden', 'hidden');
+    const closeWelcomeHelp = () => {
+        welcomeHelpModal?.setAttribute('hidden', 'hidden');
         meadowMap?.classList.remove('highlight-stations');
+        if (startGuideAfterWelcome) {
+            startGuideAfterWelcome = false;
+            document.dispatchEvent(new CustomEvent('start-meadow-onboarding'));
+        }
     };
     const paloukHelpButton = document.querySelector('[data-palouk-help-open]');
     const paloukTitle = document.querySelector('.meadow-title');
-    paloukHelpButton?.addEventListener('click', openPaloukHelp);
+    paloukHelpButton?.addEventListener('click', () => openWelcomeHelp(false));
     paloukTitle?.addEventListener('mouseenter', highlightStations);
     paloukTitle?.addEventListener('focusin', highlightStations);
     paloukTitle?.addEventListener('mouseleave', unhighlightStations);
     paloukTitle?.addEventListener('focusout', unhighlightStations);
-    document.querySelectorAll('[data-palouk-help-close]').forEach(button => button.addEventListener('click', closePaloukHelp));
-    paloukHelpModal?.addEventListener('click', event => {
-        if (event.target === paloukHelpModal) closePaloukHelp();
+    document.querySelectorAll('[data-welcome-help-close]').forEach(button => button.addEventListener('click', closeWelcomeHelp));
+    welcomeHelpModal?.addEventListener('click', event => {
+        if (event.target === welcomeHelpModal) closeWelcomeHelp();
     });
     document.addEventListener('keydown', event => {
-        if (event.key === 'Escape') closePaloukHelp();
+        if (event.key === 'Escape' && !welcomeHelpModal?.hasAttribute('hidden')) closeWelcomeHelp();
     });
 })();
 </script>
@@ -197,6 +197,11 @@
             return;
         }
         onboardingSteps[onboardingIndex]?.classList.add('active');
+        applyStepState();
+    });
+
+    document.addEventListener('start-meadow-onboarding', () => {
+        backdrop?.removeAttribute('hidden');
         applyStepState();
     });
 
