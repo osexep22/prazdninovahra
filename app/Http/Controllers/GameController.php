@@ -185,10 +185,22 @@ class GameController extends Controller
                 return $slot;
             });
         $ownedSlots = DB::table('user_building_slots')->where('user_id', $userId)->pluck('building_slot_id')->all();
+        $buildingHasTooltip = Schema::hasColumn('buildings', 'tooltip');
         $placed = DB::table('user_buildings')
             ->join('buildings', 'buildings.id', '=', 'user_buildings.building_id')
+            ->leftJoin('user_building_customizations', function ($join) use ($userId) {
+                $join->on('user_building_customizations.building_id', '=', 'buildings.id')
+                    ->where('user_building_customizations.user_id', '=', $userId);
+            })
             ->where('user_buildings.user_id', $userId)
-            ->select('user_buildings.*', 'buildings.name', 'buildings.slug', 'buildings.svg_asset_path')
+            ->select(
+                'user_buildings.*',
+                'buildings.name',
+                'buildings.slug',
+                'buildings.svg_asset_path',
+                $buildingHasTooltip ? 'buildings.tooltip' : DB::raw('NULL as tooltip'),
+                'user_building_customizations.config_json as customization_json'
+            )
             ->get()
             ->keyBy('building_slot_id');
         $buildingQuery = DB::table('buildings')->orderBy('min_colony_level')->orderBy('name');
@@ -377,8 +389,12 @@ class GameController extends Controller
         $unlocks = DB::table('customization_unlocks')->where('building_id', $building->id)->get();
         $userUnlocks = DB::table('user_customization_unlocks')->where('user_id', Auth::id())->pluck('customization_unlock_id')->all();
         $customization = DB::table('user_building_customizations')->where(['user_id' => Auth::id(), 'building_id' => $building->id])->first();
+        $customizationConfig = $customization ? json_decode((string) $customization->config_json, true) : [];
+        if (! is_array($customizationConfig)) {
+            $customizationConfig = [];
+        }
 
-        return view('game.building', compact('building', 'tasks', 'progress', 'completed', 'unlocks', 'userUnlocks', 'customization'));
+        return view('game.building', compact('building', 'tasks', 'progress', 'completed', 'unlocks', 'userUnlocks', 'customization', 'customizationConfig'));
     }
 
     public function submitBuildingTask(Request $request, int $taskId): RedirectResponse
@@ -438,10 +454,35 @@ class GameController extends Controller
             'patterns' => ['array'],
             'variants' => ['array'],
         ]);
+        $unlocks = DB::table('customization_unlocks')->where('building_id', $buildingId)->get();
+        $userUnlocks = DB::table('user_customization_unlocks')
+            ->where('user_id', $user->id)
+            ->whereIn('customization_unlock_id', $unlocks->pluck('id'))
+            ->pluck('customization_unlock_id')
+            ->all();
+        $filtered = ['colors' => [], 'patterns' => [], 'variants' => []];
+        foreach ($unlocks->whereIn('id', $userUnlocks) as $unlock) {
+            if ($unlock->type === 'color' && isset($data['colors'][$unlock->key])) {
+                $value = (string) $data['colors'][$unlock->key];
+                if (preg_match('/^#[0-9a-fA-F]{6}$/', $value)) {
+                    $filtered['colors'][$unlock->key] = $value;
+                }
+            }
+            if ($unlock->type === 'variant' && isset($data['variants'][$unlock->key])) {
+                $options = json_decode((string) $unlock->options, true);
+                $value = (string) $data['variants'][$unlock->key];
+                if (is_array($options) && in_array($value, $options, true)) {
+                    $filtered['variants'][$unlock->key] = $value;
+                }
+            }
+            if ($unlock->type === 'pattern' && isset($data['patterns'][$unlock->key])) {
+                $filtered['patterns'][$unlock->key] = (string) $data['patterns'][$unlock->key];
+            }
+        }
 
         DB::table('user_building_customizations')->updateOrInsert(
             ['user_id' => $user->id, 'building_id' => $buildingId],
-            ['config_json' => json_encode($data), 'created_at' => now(), 'updated_at' => now()]
+            ['config_json' => json_encode($filtered), 'created_at' => now(), 'updated_at' => now()]
         );
         DB::table('users')->where('id', $user->id)->update(['last_customization_change_at' => now()]);
         $this->audit('customization_changed', 'building', $buildingId, $user->id);

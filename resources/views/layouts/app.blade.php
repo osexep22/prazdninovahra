@@ -189,7 +189,8 @@
         .anthill-map { position:absolute; inset:0; z-index:2; border:0; border-radius:0; overflow:hidden; background:transparent; min-height:0; }
         .room { position:absolute; width:12%; height:12%; min-height:0; transform:translate(-50%, -50%); text-align:center; }
         .room a { display:block; width:100%; height:100%; }
-        .room img { width:100%; height:100%; max-height:none; object-fit:contain; filter:drop-shadow(0 8px 12px rgba(79,55,30,.24)); }
+        .room img, .room-svg, .room-svg svg { width:100%; height:100%; max-height:none; object-fit:contain; display:block; filter:drop-shadow(0 8px 12px rgba(79,55,30,.24)); }
+        .room-svg svg { filter:none; }
         .slot { display:block; }
         .modal-backdrop { position:fixed; inset:0; background:rgba(24,31,42,.72); z-index:1000; display:grid; place-items:center; padding:18px; overflow:auto; }
         .modal-backdrop.spotlight-backdrop { background:rgba(24,31,42,.38); }
@@ -231,6 +232,18 @@
         .leader-leaf.rank-me { background:#fff3ba; border-color:#d8a928; }
         .building-preview { width:min(360px, 100%); overflow:hidden; }
         .building-preview svg { display:block; width:100%; height:auto; max-height:360px; }
+        .building-detail-shell { display:grid; gap:18px; }
+        .building-hero { display:grid; grid-template-columns:minmax(0, 1fr) minmax(280px, 480px); align-items:center; gap:22px; }
+        .building-preview-large { width:min(480px, 100%); justify-self:center; }
+        .building-preview-large svg { max-height:520px; }
+        .building-tab-switch { display:grid; grid-template-columns:1fr 1fr; margin:-8px -8px 18px; border-radius:8px 8px 0 0; overflow:hidden; background:#e8d7b9; border:1px solid rgba(92,61,28,.18); }
+        .building-tab-switch button { border:0; border-radius:0; padding:13px 16px; background:transparent; font-weight:800; cursor:pointer; }
+        .building-tab-switch button.active { background:#fff8e8; box-shadow:inset 0 -3px 0 #7bb047; }
+        .building-tab-panel { display:none; }
+        .building-tab-panel.active { display:block; }
+        .compact-task-card { margin-top:12px; }
+        .completed-mark { display:inline-flex; align-items:center; gap:4px; margin-left:8px; padding:3px 8px; border-radius:999px; background:#e5f7df; color:#246b25; font-size:13px; }
+        .reward-pill { display:inline-flex; align-items:center; padding:4px 9px; border-radius:999px; background:#f7ead0; color:#76501c; font-weight:800; font-size:13px; }
         body.is-building-page { background-color:#8b6741; background-image:url('/assets/game/anthill/anthill-background.png'); background-position:center; background-size:cover; background-attachment:fixed; }
         body.is-building-page main::before { content:''; position:fixed; inset:0; z-index:-1; background:linear-gradient(180deg, rgba(255,247,226,.14), rgba(61,39,18,.28)); pointer-events:none; }
         table { width:100%; border-collapse:collapse; background:white; } th,td { padding:9px; border-bottom:1px solid var(--line); text-align:left; vertical-align:top; }
@@ -268,6 +281,8 @@
             .anthill-board { width:min(calc(100vw - 24px), calc((100dvh - var(--topbar-h) - 166px) * 1.333), calc(920px * var(--anthill-scale, 1))); max-height:none; align-self:start; order:1; }
             .anthill-title p:not(.muted) { width:100%; }
             .anthill-title .muted { top:58px; width:100%; }
+            .building-hero { grid-template-columns:1fr; }
+            .building-preview-large { width:min(420px, 100%); }
             .room { min-height:0; }
             .onboarding-arrow.profile { right:6px; top:-58px; font-size:58px; }
             .onboarding-arrow.menu { top:-64px; font-size:58px; }

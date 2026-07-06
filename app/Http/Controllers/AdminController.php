@@ -672,12 +672,43 @@ class AdminController extends Controller
         return back()->with('success', 'Úkol uložen.');
     }
 
+    public function updateBuildingContent(Request $request, int $id): RedirectResponse
+    {
+        $this->guardAdmin();
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:120'],
+            'description' => ['nullable', 'string'],
+            'tooltip' => ['nullable', 'string', 'max:240'],
+            'detail_text' => ['nullable', 'string'],
+        ]);
+        $building = DB::table('buildings')->find($id);
+        abort_unless($building, 404);
+
+        $payload = [
+            'name' => $data['name'],
+            'description' => $data['description'] ?? '',
+            'updated_at' => now(),
+        ];
+        if (DB::getSchemaBuilder()->hasColumn('buildings', 'tooltip')) {
+            $payload['tooltip'] = $data['tooltip'] ?? null;
+        }
+        if (DB::getSchemaBuilder()->hasColumn('buildings', 'detail_text')) {
+            $payload['detail_text'] = $data['detail_text'] ?? null;
+        }
+
+        DB::table('buildings')->where('id', $id)->update($payload);
+        $this->audit('building_content_updated', 'building', $id);
+
+        return back()->with('success', 'Budova uložena.');
+    }
+
     public function updateBuildingTask(Request $request, int $id): RedirectResponse
     {
         $this->guardAdmin();
         $data = $request->validate([
             'title' => ['required', 'string', 'max:160'],
             'body' => ['required', 'string'],
+            'unlock_description' => ['nullable', 'string', 'max:240'],
             'answer' => ['nullable', 'string', 'max:2000'],
             'sort_order' => ['required', 'integer', 'min:1', 'max:999'],
             'reward_prestige' => ['required', 'integer', 'min:0'],
@@ -697,6 +728,9 @@ class AdminController extends Controller
             'pdf_path' => $this->chosenFilePath($data['existing_pdf_path'] ?? null, $this->uploadPublicFile($request, 'pdf', 'uploads/tasks')) ?: $task->pdf_path,
             'updated_at' => now(),
         ];
+        if (DB::getSchemaBuilder()->hasColumn('building_tasks', 'unlock_description')) {
+            $payload['unlock_description'] = $data['unlock_description'] ?? null;
+        }
         if (($data['answer'] ?? '') !== '') {
             $payload['answer_hash'] = Hash::make(AnswerNormalizer::normalize($data['answer']));
         }
@@ -759,8 +793,9 @@ class AdminController extends Controller
         $unlocks = DB::table('customization_unlocks')->where('building_id', $building->id)->get();
         $userUnlocks = $unlocks->pluck('id')->all();
         $customization = null;
+        $customizationConfig = [];
 
-        return view('game.building', compact('building', 'tasks', 'progress', 'completed', 'unlocks', 'userUnlocks', 'customization'));
+        return view('game.building', compact('building', 'tasks', 'progress', 'completed', 'unlocks', 'userUnlocks', 'customization', 'customizationConfig'));
     }
 
     private function audit(string $action, ?string $entityType, ?int $entityId, ?int $targetUserId = null, ?array $newValue = null, ?string $note = null): void

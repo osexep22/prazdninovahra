@@ -5,7 +5,7 @@
     <div class="anthill-title">
         <h1>{{ ($readonly ?? false) ? 'Mraveniště: ' . $owner->display_name : 'Mraveniště' }}</h1>
         <button class="title-help" type="button" aria-label="Co je mraveniště?">?</button>
-        <p>Mraveniště je tvoje základna. Rozšiřuj ho, stav místnosti a plň jejich vnitřní úkoly.</p>
+        <p>V Mraveništi najdeš jednotlivé místnosti s doplňkovými úkoly. Jejich plněním získáš nové barvy a další kosmetické úpravy svého mraveniště.</p>
         @if($readonly ?? false)
             <p class="muted">Nahlížíš na mraveniště přítele. Je jen pro čtení.</p>
         @endif
@@ -18,30 +18,34 @@
                     $isOwned = in_array($slot->id, $ownedSlots);
                     $placedBuilding = $placed[$slot->id] ?? null;
                     $locked = $slot->required_colony_level > auth()->user()->colony_level;
+                    $placedConfig = $placedBuilding ? (json_decode((string) ($placedBuilding->customization_json ?? ''), true) ?: []) : [];
+                    $placedColors = json_encode($placedConfig['colors'] ?? []);
+                    $placedVariants = json_encode($placedConfig['variants'] ?? []);
                 @endphp
                 @if(!$locked)
                     <div class="room slot"
-                        data-description="{{ $placedBuilding ? $placedBuilding->name . ' už je připravená na práci.' : ($isOwned ? 'Prázdná komůrka čeká na novou místnost.' : 'Tahle komůrka půjde koupit za ' . $slot->cost_resources . ' surovin.') }}"
+                        data-description="{{ $placedBuilding ? (($placedBuilding->tooltip ?? null) ?: $placedBuilding->name . ' už je připravená na práci.') : ($isOwned ? 'V této komůrce zatím nesídlí žádný mravenec. Za nasbírané suroviny zde můžeš vybudovat nové zázemí.' : 'Tahle komůrka půjde koupit za ' . $slot->cost_resources . ' surovin.') }}"
                         @if(!$placedBuilding && !($readonly ?? false)) data-modal="slot-modal-{{ $slot->id }}" tabindex="0" role="button" @endif
                         style="left:{{ $slot->layout_x }}%; top:{{ $slot->layout_y }}%; width:{{ $slot->layout_w ?? 12 }}%; height:{{ $slot->layout_h ?? 12 }}%;">
                         @if($placedBuilding)
                             @if($readonly ?? false)
-                                <img src="{{ $placedBuilding->svg_asset_path }}" alt="{{ $placedBuilding->name }}">
+                                <span class="room-svg" role="img" aria-label="{{ $placedBuilding->name }}" data-src="{{ $placedBuilding->svg_asset_path }}" data-colors='{{ $placedColors }}' data-variants='{{ $placedVariants }}'></span>
                             @else
-                                <a href="/budovy/{{ $placedBuilding->slug }}" aria-label="{{ $placedBuilding->name }}"><img src="{{ $placedBuilding->svg_asset_path }}" alt="{{ $placedBuilding->name }}"></a>
+                                <a href="/budovy/{{ $placedBuilding->slug }}" aria-label="{{ $placedBuilding->name }}"><span class="room-svg" data-src="{{ $placedBuilding->svg_asset_path }}" data-colors='{{ $placedColors }}' data-variants='{{ $placedVariants }}'></span></a>
                             @endif
                         @elseif($isOwned)
-                            <img src="/assets/game/rooms/prazdna-mistnost.svg" alt="Prázdný slot">
+                            <img src="/assets/game/rooms/prazdna-mistnost.svg" alt="Prázdná komůrka">
                         @else
-                            <img src="/assets/placeholders/slot-available.svg" alt="Dostupný slot">
+                            <img src="/assets/placeholders/slot-available.svg" alt="Dostupná komůrka">
                         @endif
                     </div>
                     @if(!$placedBuilding && !($readonly ?? false))
                         <div class="action-modal" id="slot-modal-{{ $slot->id }}" aria-hidden="true">
                             <div class="modal-window">
-                                <h2>Komůrka {{ $slot->slot_number }}</h2>
+                                <h2>Prázdná komůrka</h2>
                                 @if($isOwned)
-                                    <p>Tenhle prostor je koupený a prázdný. Vyber, co sem postavit.</p>
+                                    <p>V této komůrce zatím nesídlí žádný mravenec. Za nasbírané suroviny zde můžeš vybudovat nové zázemí a pozvat dalšího obyvatele Mraveniště.</p>
+                                    <p class="small muted">Další komůrky odemkneš postupným plněním hlavního příběhu.</p>
                                     @if(count($ownedBuildingIds) < $buildings->count())
                                         <form method="post" action="/mraveniste/build">
                                             @csrf
@@ -50,7 +54,7 @@
                                             <select name="building_id">
                                                 @foreach($buildings as $building)
                                                     @if(!in_array($building->id, $ownedBuildingIds))
-                                                        <option value="{{ $building->id }}">{{ $building->name }} ({{ $building->cost_resources }} surovin, od úrovně kolonie {{ $building->min_colony_level }})</option>
+                                                        <option value="{{ $building->id }}">{{ $building->name }} ({{ $building->cost_resources }} surovin)</option>
                                                     @endif
                                                 @endforeach
                                             </select>
@@ -142,6 +146,25 @@
                 modal.setAttribute('aria-hidden', 'true');
             });
         }
+    });
+    document.querySelectorAll('.room-svg').forEach(target => {
+        fetch(target.dataset.src)
+            .then(response => response.text())
+            .then(svg => {
+                target.innerHTML = svg;
+                const colors = JSON.parse(target.dataset.colors || '{}');
+                Object.entries(colors).forEach(([key, value]) => {
+                    target.style.setProperty(`--${key}`, value);
+                    const editTarget = target.querySelector('#edit_color__' + key);
+                    if (editTarget) editTarget.setAttribute('fill', value);
+                });
+                const variants = JSON.parse(target.dataset.variants || '{}');
+                Object.entries(variants).forEach(([key, value]) => {
+                    target.querySelectorAll('[id^="edit_variant__' + key + '__"]').forEach(el => el.style.opacity = '0');
+                    const variantTarget = target.querySelector('#edit_variant__' + key + '__' + value);
+                    if (variantTarget) variantTarget.style.opacity = '1';
+                });
+            });
     });
 </script>
 @endsection

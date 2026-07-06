@@ -124,6 +124,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/obsah/texty/{key}', [AdminController::class, 'updateGameContent']);
         Route::post('/obsah/lokace/{id}', [AdminController::class, 'updateLocation']);
         Route::post('/obsah/ukoly/{id}', [AdminController::class, 'updateLocationTask']);
+        Route::post('/obsah/budovy/{id}', [AdminController::class, 'updateBuildingContent']);
         Route::post('/obsah/budovy/ukoly/{id}', [AdminController::class, 'updateBuildingTask']);
         Route::post('/odznacky/{id}', [AdminController::class, 'updateBadge']);
         Route::post('/soubory', [AdminController::class, 'storeGameFile']);
