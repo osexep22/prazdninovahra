@@ -781,21 +781,39 @@ class AdminController extends Controller
         return view('game.location', compact('location', 'state', 'tasks', 'progress', 'hints', 'purchased'));
     }
 
-    public function previewBuilding(string $slug): View
+    public function previewBuilding(Request $request, string $slug): View
     {
         $this->guardAdmin();
         $building = DB::table('buildings')->where('slug', $slug)->first();
         abort_unless($building, 404);
 
-        $tasks = DB::table('building_tasks')->where('building_id', $building->id)->get();
-        $progress = collect();
-        $completed = 0;
-        $unlocks = DB::table('customization_unlocks')->where('building_id', $building->id)->get();
-        $userUnlocks = $unlocks->pluck('id')->all();
-        $customization = null;
-        $customizationConfig = [];
+        $previewUserId = $request->integer('player_id') ?: null;
+        $previewPlayer = $previewUserId ? DB::table('users')->where('id', $previewUserId)->where('role', 'player')->first() : null;
+        abort_if($previewUserId && ! $previewPlayer, 404);
 
-        return view('game.building', compact('building', 'tasks', 'progress', 'completed', 'unlocks', 'userUnlocks', 'customization', 'customizationConfig'));
+        if ($previewPlayer) {
+            abort_unless(DB::table('user_buildings')->where(['user_id' => $previewPlayer->id, 'building_id' => $building->id])->exists(), 404);
+        }
+
+        $tasks = DB::table('building_tasks')->where('building_id', $building->id)->orderBy('sort_order')->get();
+        $progress = $previewPlayer
+            ? DB::table('user_building_task_progress')->where('user_id', $previewPlayer->id)->pluck('status', 'building_task_id')
+            : collect();
+        $completed = $progress->filter(fn ($status) => $status === 'completed')->count();
+        $unlocks = DB::table('customization_unlocks')->where('building_id', $building->id)->get();
+        $userUnlocks = $previewPlayer
+            ? DB::table('user_customization_unlocks')->where('user_id', $previewPlayer->id)->pluck('customization_unlock_id')->all()
+            : [];
+        $customization = $previewPlayer
+            ? DB::table('user_building_customizations')->where(['user_id' => $previewPlayer->id, 'building_id' => $building->id])->first()
+            : null;
+        $customizationConfig = $customization ? json_decode((string) $customization->config_json, true) : [];
+        if (! is_array($customizationConfig)) {
+            $customizationConfig = [];
+        }
+        $isAdminPreview = true;
+
+        return view('game.building', compact('building', 'tasks', 'progress', 'completed', 'unlocks', 'userUnlocks', 'customization', 'customizationConfig', 'isAdminPreview', 'previewPlayer'));
     }
 
     private function audit(string $action, ?string $entityType, ?int $entityId, ?int $targetUserId = null, ?array $newValue = null, ?string $note = null): void

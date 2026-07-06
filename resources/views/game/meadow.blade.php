@@ -19,14 +19,19 @@
     <div class="onboarding-backdrop" data-step="1">
         <div class="onboarding-card">
             <div class="onboarding-step active" data-step="1">
+                <h2>Vítej v Prázdninové hře</h2>
+                <p>Hraješ za mravenčí výpravu, která se ocitla na velkém palouku. Čekají tě šifry, stanoviště v okolí a postupné budování vlastního mraveniště.</p>
+                <p>Každé splněné stanoviště ti přinese suroviny, prestiž a posune příběh dál.</p>
+            </div>
+            <div class="onboarding-step" data-step="2">
                 <h2>Toto je Palouk</h2>
                 <p>Tady začíná tvoje výprava. Hledej viditelná stanoviště na mapě, najeď na ně pro nápovědu a kliknutím otevři úkol.</p>
             </div>
-            <div class="onboarding-step" data-step="2">
+            <div class="onboarding-step" data-step="3">
                 <h2>Tvoje kolonie</h2>
                 <p>Vpravo nahoře je mravenec s tvým jménem. Tady najdeš úroveň kolonie, prestiž, suroviny, nové zprávy a odznáčky.</p>
             </div>
-            <div class="onboarding-step" data-step="3">
+            <div class="onboarding-step" data-step="4">
                 <h2>Horní menu</h2>
                 <p>Menu tě vezme do žebříčku, k přátelům, do zpráv a později také do mraveniště.</p>
             </div>
@@ -171,9 +176,9 @@
     const applyStepState = () => {
         const step = onboardingSteps[onboardingIndex]?.dataset.step || '1';
         backdrop?.setAttribute('data-step', step);
-        side?.classList.toggle('force-open', step === '2');
-        document.body.classList.toggle('onboarding-stats-focus', step === '2');
-        document.body.classList.toggle('onboarding-menu-focus', step === '3');
+        side?.classList.toggle('force-open', step === '3');
+        document.body.classList.toggle('onboarding-stats-focus', step === '3');
+        document.body.classList.toggle('onboarding-menu-focus', step === '4');
         onboardingNext.textContent = onboardingIndex === onboardingSteps.length - 1 ? 'Dokončit' : 'Další';
     };
 

@@ -53,7 +53,7 @@
                 <textarea name="detail_text" rows="4">{{ $building->detail_text ?? $building->description }}</textarea>
                 <label>Interní popis budovy</label>
                 <textarea name="description" rows="3">{{ $building->description }}</textarea>
-                <p class="row"><button class="primary">Uložit budovu</button><a class="btn" href="/admin/nahled/budovy/{{ $building->slug }}">Náhled jako hráč</a></p>
+                <p class="row"><button class="primary">Uložit budovu</button><a class="btn" href="/admin/nahled/budovy/{{ $building->slug }}">Obsahový náhled</a></p>
             </form>
 
             <h3>Podúkoly</h3>

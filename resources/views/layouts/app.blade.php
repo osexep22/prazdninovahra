@@ -165,8 +165,8 @@
         .floating-tooltip p { color:#d9e4f1; margin:4px 0 0; }
         .onboarding-backdrop { position:fixed; inset:0; z-index:900; display:grid; place-items:end start; padding:110px 24px 24px; background:rgba(15,23,42,.18); pointer-events:none; }
         .onboarding-card { position:relative; z-index:2; width:min(380px, calc(100vw - 48px)); border-radius:8px; border:1px solid #d8c27c; background:#fffdf0; box-shadow:0 22px 60px rgba(23,32,51,.28); padding:16px; pointer-events:auto; }
-        .onboarding-backdrop[data-step="2"] { place-items:start end; padding:98px 338px 24px 24px; }
-        .onboarding-backdrop[data-step="3"] { place-items:start center; padding:78px 24px 24px; }
+        .onboarding-backdrop[data-step="3"] { place-items:start end; padding:98px 338px 24px 24px; }
+        .onboarding-backdrop[data-step="4"] { place-items:start center; padding:78px 24px 24px; }
         body.onboarding-menu-focus .onboarding-backdrop, body.onboarding-stats-focus .onboarding-backdrop { background:rgba(15,23,42,.10); }
         body.onboarding-menu-focus .top { z-index:960; background:rgba(255,255,255,.98); filter:none; opacity:1; outline:6px solid #ffd43b; box-shadow:0 0 0 10px rgba(255,212,59,.34), 0 0 0 9999px rgba(15,23,42,.10), 0 16px 34px rgba(70,95,35,.18); animation:onboardingGlow 1.05s ease-in-out infinite; }
         body.onboarding-stats-focus .side { z-index:960; background:#fffaf0; filter:none; opacity:1; outline:6px solid #ffd43b; box-shadow:0 0 0 10px rgba(255,212,59,.38), 0 0 0 9999px rgba(15,23,42,.10), 0 18px 48px rgba(40,55,29,.24); animation:onboardingGlow 1.05s ease-in-out infinite; }
@@ -271,7 +271,7 @@
             body.is-meadow .meadow-board { position:relative; top:auto; height:auto; aspect-ratio:1 / 1; width:100vw; max-height:calc(100dvh - var(--topbar-h)); background:#94c86a; }
             body.is-meadow .meadow-map { inset:0 auto auto 50%; top:0; height:100%; width:auto; max-height:none; transform:translateX(-50%); }
             body.is-meadow .side { margin:4px 12px 12px; }
-            .onboarding-backdrop, .onboarding-backdrop[data-step="2"], .onboarding-backdrop[data-step="3"] { place-items:end center; padding:84px 12px 18px; }
+            .onboarding-backdrop, .onboarding-backdrop[data-step="3"], .onboarding-backdrop[data-step="4"] { place-items:end center; padding:84px 12px 18px; }
             body.is-anthill .top { position:sticky; }
             body.is-anthill { overflow:hidden; }
             body.is-anthill main { height:calc(100dvh - var(--topbar-h)); overflow:hidden; }

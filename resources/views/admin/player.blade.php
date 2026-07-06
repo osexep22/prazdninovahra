@@ -77,7 +77,12 @@
     </div>
 @endforeach
 <h2>Budovy</h2>
-@foreach($buildings as $building)<div class="card" style="margin-bottom:8px">{{ $building->name }}</div>@endforeach
+@foreach($buildings as $building)
+    <div class="card row" style="margin-bottom:8px">
+        <span>{{ $building->name }}</span>
+        <a class="btn" href="/admin/nahled/budovy/{{ $building->slug }}?player_id={{ $player->id }}">Náhled jako tento hráč</a>
+    </div>
+@endforeach
 <h2>Úkoly</h2>
 @foreach($tasks as $task)<div class="card" style="margin-bottom:8px">Úkol #{{ $task->location_task_id }} - {{ $task->status }}</div>@endforeach
 <h2>Zprávy</h2>

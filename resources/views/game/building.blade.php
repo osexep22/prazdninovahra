@@ -2,11 +2,25 @@
 @section('content')
 @php
     $customizationConfig = $customizationConfig ?? [];
+    $isAdminPreview = $isAdminPreview ?? false;
+    $previewPlayer = $previewPlayer ?? null;
     $unlocked = $unlocks->whereIn('id', $userUnlocks);
     $detailText = trim((string) (($building->detail_text ?? null) ?: $building->description));
 @endphp
 
 <div class="building-detail-shell">
+    @if($isAdminPreview)
+        <div class="panel">
+            @if($previewPlayer)
+                <b>Admin náhled hráče {{ $previewPlayer->display_name }}</b>
+                <p class="muted">Zobrazuje se skutečný stav této budovy pro vybraného hráče: splněné úkoly, odemčené úpravy a uložený vzhled. V náhledu nejde nic odesílat ani měnit.</p>
+            @else
+                <b>Obsahový náhled budovy</b>
+                <p class="muted">Tento náhled slouží ke kontrole textů a úkolů. Nepředstírá postup konkrétního hráče, proto v něm nejsou odemčené hráčské úpravy vzhledu.</p>
+            @endif
+        </div>
+    @endif
+
     <section class="building-hero panel">
         <div>
             <h1>{{ $building->name }}</h1>
@@ -36,7 +50,7 @@
                     @if($task->pdf_path ?? null)
                         <p><a class="btn" href="{{ $task->pdf_path }}" download>Stáhnout PDF k podúkolu</a></p>
                     @endif
-                    @if(($progress[$task->id] ?? '') !== 'completed')
+                    @if(!$isAdminPreview && ($progress[$task->id] ?? '') !== 'completed')
                         <form method="post" action="/building-tasks/{{ $task->id }}">
                             @csrf
                             <label>Kód</label>
@@ -56,6 +70,16 @@
             @if($unlocked->isEmpty())
                 <p>Zatím nemáš odemčenou žádnou úpravu vzhledu pro tuto místnost.</p>
             @else
+                @if($isAdminPreview)
+                    <div class="grid">
+                        @foreach($unlocked as $unlock)
+                            <div class="stat">
+                                <b>{{ $unlock->label }}</b><br>
+                                <span class="small muted">{{ $unlock->type === 'color' ? 'Barva' : 'Varianta' }}</span>
+                            </div>
+                        @endforeach
+                    </div>
+                @else
                 <form method="post" action="/buildings/{{ $building->id }}/customization">
                     @csrf
                     <div class="grid">
@@ -77,6 +101,7 @@
                     </div>
                     <p><button class="primary">Uložit vzhled</button></p>
                 </form>
+                @endif
             @endif
         </div>
     </section>
