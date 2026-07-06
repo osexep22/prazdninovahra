@@ -147,21 +147,84 @@
             });
         }
     });
-    document.querySelectorAll('.room-svg').forEach(target => {
+    const parseJsonData = (value) => {
+        try {
+            return JSON.parse(value || '{}');
+        } catch (error) {
+            return {};
+        }
+    };
+    const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const findByOriginalId = (root, originalId) => Array.from(root.querySelectorAll('[data-original-id]'))
+        .find(element => element.dataset.originalId === originalId);
+    const findByOriginalPrefix = (root, originalPrefix) => Array.from(root.querySelectorAll('[data-original-id]'))
+        .filter(element => element.dataset.originalId.startsWith(originalPrefix));
+    const namespaceInlineSvgIds = (root, prefix) => {
+        const idMap = new Map();
+        root.querySelectorAll('[id]').forEach(element => {
+            const originalId = element.id;
+            if (!idMap.has(originalId)) {
+                idMap.set(originalId, `${prefix}${originalId}`);
+            }
+            element.dataset.originalId = originalId;
+        });
+
+        if (!idMap.size) return;
+
+        root.querySelectorAll('[id]').forEach(element => {
+            element.id = idMap.get(element.dataset.originalId);
+        });
+
+        const ids = Array.from(idMap.keys()).sort((a, b) => b.length - a.length);
+        root.querySelectorAll('*').forEach(element => {
+            Array.from(element.attributes).forEach(attribute => {
+                if (attribute.name === 'id' || attribute.name === 'data-original-id') return;
+                let value = attribute.value;
+                ids.forEach(originalId => {
+                    const namespacedId = idMap.get(originalId);
+                    value = value.replace(
+                        new RegExp(`url\\((["']?)#${escapeRegExp(originalId)}\\1\\)`, 'g'),
+                        `url($1#${namespacedId}$1)`
+                    );
+                    if (value === `#${originalId}`) {
+                        value = `#${namespacedId}`;
+                    }
+                });
+                if (value !== attribute.value) {
+                    element.setAttribute(attribute.name, value);
+                }
+            });
+        });
+
+        root.querySelectorAll('style').forEach(style => {
+            let css = style.textContent;
+            ids.forEach(originalId => {
+                const namespacedId = idMap.get(originalId);
+                css = css.replace(
+                    new RegExp(`url\\((["']?)#${escapeRegExp(originalId)}\\1\\)`, 'g'),
+                    `url($1#${namespacedId}$1)`
+                );
+            });
+            style.textContent = css;
+        });
+    };
+
+    document.querySelectorAll('.room-svg').forEach((target, index) => {
         fetch(target.dataset.src)
             .then(response => response.text())
             .then(svg => {
                 target.innerHTML = svg;
-                const colors = JSON.parse(target.dataset.colors || '{}');
+                namespaceInlineSvgIds(target, `anthillRoom${index}__`);
+                const colors = parseJsonData(target.dataset.colors);
                 Object.entries(colors).forEach(([key, value]) => {
                     target.style.setProperty(`--${key}`, value);
-                    const editTarget = target.querySelector('#edit_color__' + key);
+                    const editTarget = findByOriginalId(target, 'edit_color__' + key);
                     if (editTarget) editTarget.setAttribute('fill', value);
                 });
-                const variants = JSON.parse(target.dataset.variants || '{}');
+                const variants = parseJsonData(target.dataset.variants);
                 Object.entries(variants).forEach(([key, value]) => {
-                    target.querySelectorAll('[id^="edit_variant__' + key + '__"]').forEach(el => el.style.opacity = '0');
-                    const variantTarget = target.querySelector('#edit_variant__' + key + '__' + value);
+                    findByOriginalPrefix(target, 'edit_variant__' + key + '__').forEach(el => el.style.opacity = '0');
+                    const variantTarget = findByOriginalId(target, 'edit_variant__' + key + '__' + value);
                     if (variantTarget) variantTarget.style.opacity = '1';
                 });
             });
