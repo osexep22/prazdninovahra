@@ -107,6 +107,11 @@ class AdminController extends Controller
         }
     }
 
+    private function anthillBuildingSlugs(): array
+    {
+        return ['telocvicna', 'krejci', 'kuchyn', 'malir', 'obyvak', 'remeslnik', 'hudebna', 'zahradnik', 'porodnice', 'hospoda'];
+    }
+
     public function updatePlayer(Request $request, int $id): RedirectResponse
     {
         $this->guardAdmin();
@@ -366,13 +371,15 @@ class AdminController extends Controller
     public function economy(): View
     {
         $this->guardAdmin();
+        $anthillBuildingSlugs = $this->anthillBuildingSlugs();
 
         return view('admin.economy', [
             'settings' => $this->economy->allSettings(),
             'locations' => DB::table('locations')->orderBy('sort_order')->get(['id', 'name', 'slug', 'reward_resources', 'reward_prestige']),
-            'buildings' => DB::table('buildings')->orderBy('name')->get(['id', 'name', 'slug', 'cost_resources']),
+            'buildings' => DB::table('buildings')->whereIn('slug', $anthillBuildingSlugs)->orderBy('name')->get(['id', 'name', 'slug', 'cost_resources']),
             'buildingTasks' => DB::table('building_tasks')
                 ->join('buildings', 'buildings.id', '=', 'building_tasks.building_id')
+                ->whereIn('buildings.slug', $anthillBuildingSlugs)
                 ->select('building_tasks.id', 'building_tasks.title', 'building_tasks.reward_prestige', 'building_tasks.reward_resources', 'buildings.name as building_name')
                 ->orderBy('buildings.name')
                 ->orderBy('building_tasks.sort_order')
@@ -501,6 +508,7 @@ class AdminController extends Controller
     public function content(): View
     {
         $this->guardAdmin();
+        $anthillBuildingSlugs = $this->anthillBuildingSlugs();
 
         return view('admin.content', [
             'intro' => DB::table('game_contents')->where('key', 'intro_story')->first(),
@@ -514,9 +522,10 @@ class AdminController extends Controller
                 ->orderBy('location_tasks.sort_order')
                 ->get(),
             'taskHints' => DB::table('task_hints')->orderBy('sort_order')->get()->groupBy('location_task_id'),
-            'buildings' => DB::table('buildings')->get(),
+            'buildings' => DB::table('buildings')->whereIn('slug', $anthillBuildingSlugs)->orderBy('name')->get(),
             'buildingTasks' => DB::table('building_tasks')
                 ->join('buildings', 'buildings.id', '=', 'building_tasks.building_id')
+                ->whereIn('buildings.slug', $anthillBuildingSlugs)
                 ->select('building_tasks.*', 'buildings.name as building_name')
                 ->orderBy('buildings.id')
                 ->orderBy('building_tasks.sort_order')
