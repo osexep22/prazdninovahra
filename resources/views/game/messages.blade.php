@@ -34,8 +34,8 @@
     $activeEntries = $activeMessage ? ($entries[$activeMessage->id] ?? collect()) : collect();
 @endphp
 
-<h1>Zprávy</h1>
 <div class="panel" style="margin-bottom:12px">
+    <h1>Zprávy</h1>
     <form method="get" action="/zpravy" class="row">
         <label style="margin:0;min-width:220px">Nová zpráva
             <select name="recipient">
@@ -48,6 +48,7 @@
         <button class="primary">Otevřít chat</button>
     </form>
 </div>
+
 <div class="chat-shell">
     <aside class="panel thread-list">
         <h2>Chaty</h2>

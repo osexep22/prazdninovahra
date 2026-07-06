@@ -31,14 +31,23 @@
 @if($contentMode === 'mraveniste')
     <h2>Budovy v mraveništi</h2>
     @foreach($buildings as $building)
-        @php($tasksForBuilding = $buildingTasks->where('building_id', $building->id))
+        @php
+            $tasksForBuilding = $buildingTasks->where('building_id', $building->id);
+            $tooltipFallback = $building->name . ' už je připravená na práci.';
+        @endphp
         <details class="card" style="margin-bottom:12px" open>
             <summary><b>{{ $building->name }}</b> <span class="small muted">({{ $building->slug }})</span></summary>
             <form method="post" action="/admin/obsah/budovy/{{ $building->id }}">
                 @csrf
                 <div class="grid">
                     <div><label>Název budovy</label><input name="name" value="{{ $building->name }}" required></div>
-                    <div><label>Tooltip v Mraveništi</label><input name="tooltip" value="{{ $building->tooltip ?? '' }}" maxlength="240"></div>
+                    <div>
+                        <label>Tooltip v Mraveništi</label>
+                        <input name="tooltip" value="{{ $building->tooltip ?: $tooltipFallback }}" maxlength="240">
+                        @if(!($building->tooltip ?? null))
+                            <p class="small muted">Zatím se používá automatický text: {{ $tooltipFallback }}</p>
+                        @endif
+                    </div>
                 </div>
                 <label>Krátký text v detailu budovy</label>
                 <textarea name="detail_text" rows="4">{{ $building->detail_text ?? $building->description }}</textarea>

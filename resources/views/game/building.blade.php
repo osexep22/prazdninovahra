@@ -60,10 +60,11 @@
                     @csrf
                     <div class="grid">
                         @foreach($unlocked as $unlock)
+                            @php($savedColor = data_get($customizationConfig, 'colors.' . $unlock->key))
                             <div>
                                 <label>{{ $unlock->label }}</label>
                                 @if($unlock->type === 'color')
-                                    <input class="custom-control" data-kind="color" data-key="{{ $unlock->key }}" type="color" name="colors[{{ $unlock->key }}]" value="{{ data_get($customizationConfig, 'colors.' . $unlock->key, '#b93535') }}">
+                                    <input class="custom-control" data-kind="color" data-key="{{ $unlock->key }}" data-saved="{{ $savedColor ? '1' : '0' }}" type="color" name="colors[{{ $unlock->key }}]" value="{{ $savedColor ?: '#ffffff' }}">
                                 @elseif($unlock->type === 'variant')
                                     <select class="custom-control" data-kind="variant" data-key="{{ $unlock->key }}" name="variants[{{ $unlock->key }}]">
                                         @foreach(json_decode($unlock->options, true) ?? [] as $option)
@@ -88,9 +89,11 @@
             const kind = control.dataset.kind;
             const key = control.dataset.key;
             if (kind === 'color') {
-                preview.style.setProperty(`--${key}`, control.value);
-                const target = preview.querySelector('#edit_color__' + key);
-                if (target) target.setAttribute('fill', control.value);
+                if (control.dataset.saved === '1' || control.dataset.dirty === '1') {
+                    preview.style.setProperty(`--${key}`, control.value);
+                    const target = preview.querySelector('#edit_color__' + key);
+                    if (target) target.setAttribute('fill', control.value);
+                }
             }
             if (kind === 'variant') {
                 preview.querySelectorAll('[id^="edit_variant__' + key + '__"]').forEach(el => el.style.opacity = '0');
@@ -104,9 +107,20 @@
         .then(response => response.text())
         .then(svg => {
             preview.innerHTML = svg;
-            document.querySelectorAll('.custom-control').forEach(control => control.addEventListener('input', applyCustomization));
+            document.querySelectorAll('.custom-control').forEach(control => control.addEventListener('input', () => {
+                control.dataset.dirty = '1';
+                applyCustomization();
+            }));
             applyCustomization();
         });
+
+    document.querySelector('form[action="/buildings/{{ $building->id }}/customization"]')?.addEventListener('submit', () => {
+        document.querySelectorAll('.custom-control[data-kind="color"]').forEach(control => {
+            if (control.dataset.saved !== '1' && control.dataset.dirty !== '1') {
+                control.disabled = true;
+            }
+        });
+    });
 
     document.querySelectorAll('[data-building-tab]').forEach(button => {
         button.addEventListener('click', () => {

@@ -236,10 +236,11 @@
         .building-hero { display:grid; grid-template-columns:minmax(0, 1fr) minmax(280px, 480px); align-items:center; gap:22px; }
         .building-preview-large { width:min(480px, 100%); justify-self:center; }
         .building-preview-large svg { max-height:520px; }
-        .building-tab-switch { display:grid; grid-template-columns:1fr 1fr; margin:-8px -8px 18px; border-radius:8px 8px 0 0; overflow:hidden; background:#e8d7b9; border:1px solid rgba(92,61,28,.18); }
-        .building-tab-switch button { border:0; border-radius:0; padding:13px 16px; background:transparent; font-weight:800; cursor:pointer; }
-        .building-tab-switch button.active { background:#fff8e8; box-shadow:inset 0 -3px 0 #7bb047; }
-        .building-tab-panel { display:none; }
+        .building-tabs { padding:0; overflow:hidden; background:#fff8e8; }
+        .building-tab-switch { display:grid; grid-template-columns:1fr 1fr; margin:0; overflow:hidden; background:#d8c5a3; border:0; border-bottom:1px solid rgba(92,61,28,.18); }
+        .building-tab-switch button { border:0; border-radius:0; padding:16px 18px; background:#eadcc4; color:#6b5a42; font-weight:900; cursor:pointer; box-shadow:inset 0 -1px 0 rgba(92,61,28,.12); }
+        .building-tab-switch button.active { background:#fff8e8; color:#1f2933; box-shadow:0 -1px 0 #fff8e8, inset 0 4px 0 #7bb047; }
+        .building-tab-panel { display:none; padding:18px; background:#fff8e8; border-top:0; }
         .building-tab-panel.active { display:block; }
         .compact-task-card { margin-top:12px; }
         .completed-mark { display:inline-flex; align-items:center; gap:4px; margin-left:8px; padding:3px 8px; border-radius:999px; background:#e5f7df; color:#246b25; font-size:13px; }
