@@ -114,6 +114,34 @@
         </form>
     </div>
 
+    <div class="panel" style="margin-bottom:16px">
+        <h2>Uvítání po úvodním příběhu</h2>
+        <form method="post" action="/admin/obsah/texty/meadow_onboarding_welcome">
+            @csrf
+            <label>Nadpis</label>
+            <input name="title" value="{{ $onboardingWelcome->title ?? 'Vítej v Prázdninové hře' }}" required>
+            <label>Text uvítacího okna</label>
+            <textarea name="body_top" rows="5">{{ trim(implode("\n\n", array_filter([$onboardingWelcome->body_top ?? null, $onboardingWelcome->body_middle ?? null, $onboardingWelcome->body_bottom ?? null]))) ?: "Hraješ za mravenčí výpravu, která se ocitla na velkém palouku. Čekají tě šifry, stanoviště v okolí a postupné budování vlastního mraveniště.\n\nKaždé splněné stanoviště ti přinese suroviny, prestiž a posune příběh dál." }}</textarea>
+            <input type="hidden" name="body_middle" value="">
+            <input type="hidden" name="body_bottom" value="">
+            <p><button class="primary">Uložit uvítání</button></p>
+        </form>
+    </div>
+
+    <div class="panel" style="margin-bottom:16px">
+        <h2>Nápověda na přihlašovací obrazovce</h2>
+        <form method="post" action="/admin/obsah/texty/login_help">
+            @csrf
+            <label>Nadpis</label>
+            <input name="title" value="{{ $loginHelp->title ?? 'Co je Prázdninová hra?' }}" required>
+            <label>Text pod otazníkem na loginu</label>
+            <textarea name="body_top" rows="5">{{ trim(implode("\n\n", array_filter([$loginHelp->body_top ?? null, $loginHelp->body_middle ?? null, $loginHelp->body_bottom ?? null]))) ?: "Letní dobrodružství pro děti a rodiny. Hráči plní šifry a úkoly na palouku, sbírají suroviny, staví mraveniště a postupně odemykají další části příběhu.\n\nNa cestě potkají obyvatele palouku, napraví staré chyby a pomohou mravenčí výpravě najít nový domov." }}</textarea>
+            <input type="hidden" name="body_middle" value="">
+            <input type="hidden" name="body_bottom" value="">
+            <p><button class="primary">Uložit nápovědu loginu</button></p>
+        </form>
+    </div>
+
     <h2>Lokace na palouku</h2>
     @foreach($locations as $location)
         <details class="card" style="margin-bottom:10px">

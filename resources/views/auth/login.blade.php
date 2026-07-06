@@ -1,5 +1,13 @@
 @extends('layouts.app')
 @section('content')
+@php
+    $loginHelpTitle = $loginHelp->title ?? 'Co je Prázdninová hra?';
+    $loginHelpText = trim(implode("\n\n", array_filter([
+        $loginHelp->body_top ?? null,
+        $loginHelp->body_middle ?? null,
+        $loginHelp->body_bottom ?? null,
+    ]))) ?: "Letní dobrodružství pro děti a rodiny. Hráči plní šifry a úkoly na palouku, sbírají suroviny, staví mraveniště a postupně odemykají další části příběhu.\n\nNa cestě potkají obyvatele palouku, napraví staré chyby a pomohou mravenčí výpravě najít nový domov.";
+@endphp
 <script>
     window.addEventListener('pageshow', (event) => {
         if (event.persisted) {
@@ -17,11 +25,10 @@
         <div class="panel auth-card">
             <div class="login-title">
                 <h1>Přihlášení</h1>
-                <button class="help-dot" type="button" aria-label="Co je Prázdninová hra?">?</button>
+                <button class="help-dot" type="button" aria-label="{{ $loginHelpTitle }}">?</button>
                 <div class="help-popover">
-                    <b>Co je Prázdninová hra?</b>
-                    <p>Letní dobrodružství pro děti a rodiny. Hráči plní šifry a úkoly na palouku, sbírají suroviny, staví mraveniště a postupně odemykají další části příběhu.</p>
-                    <p>Na cestě potkají obyvatele palouku, napraví staré chyby a pomohou mravenčí výpravě najít nový domov.</p>
+                    <b>{{ $loginHelpTitle }}</b>
+                    <p>{!! nl2br(e($loginHelpText)) !!}</p>
                 </div>
             </div>
             @if($errors->any()) <div class="flash err">{{ $errors->first() }}</div> @endif

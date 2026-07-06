@@ -1,5 +1,13 @@
 @extends('layouts.app')
 @section('content')
+@php
+    $welcomeTitle = $onboardingWelcome->title ?? 'Vítej v Prázdninové hře';
+    $welcomeText = trim(implode("\n\n", array_filter([
+        $onboardingWelcome->body_top ?? null,
+        $onboardingWelcome->body_middle ?? null,
+        $onboardingWelcome->body_bottom ?? null,
+    ]))) ?: "Hraješ za mravenčí výpravu, která se ocitla na velkém palouku. Čekají tě šifry, stanoviště v okolí a postupné budování vlastního mraveniště.\n\nKaždé splněné stanoviště ti přinese suroviny, prestiž a posune příběh dál.";
+@endphp
 @if($intro)
     <div class="modal-backdrop">
         <div class="modal-window story-window">
@@ -19,9 +27,8 @@
     <div class="onboarding-backdrop" data-step="1">
         <div class="onboarding-card">
             <div class="onboarding-step active" data-step="1">
-                <h2>Vítej v Prázdninové hře</h2>
-                <p>Hraješ za mravenčí výpravu, která se ocitla na velkém palouku. Čekají tě šifry, stanoviště v okolí a postupné budování vlastního mraveniště.</p>
-                <p>Každé splněné stanoviště ti přinese suroviny, prestiž a posune příběh dál.</p>
+                <h2>{{ $welcomeTitle }}</h2>
+                <p>{!! nl2br(e($welcomeText)) !!}</p>
             </div>
             <div class="onboarding-step" data-step="2">
                 <h2>Toto je Palouk</h2>

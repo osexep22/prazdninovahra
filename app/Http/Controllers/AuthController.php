@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
 class AuthController extends Controller
@@ -26,6 +27,7 @@ class AuthController extends Controller
 
         return $this->uncachedView('auth.login', [
             'src' => $request->session()->get('registration_source'),
+            'loginHelp' => DB::table('game_contents')->where('key', 'login_help')->first(),
         ]);
     }
 

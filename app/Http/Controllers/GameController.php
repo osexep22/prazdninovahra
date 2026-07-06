@@ -33,6 +33,7 @@ class GameController extends Controller
             'announcement' => $this->nextAnnouncement(),
             'intro' => $user->intro_seen_at ? null : DB::table('game_contents')->where('key', 'intro_story')->first(),
             'showOnboarding' => $user->intro_seen_at && ! $user->meadow_onboarding_seen_at,
+            'onboardingWelcome' => DB::table('game_contents')->where('key', 'meadow_onboarding_welcome')->first(),
             'anthillUnlocked' => $this->anthillUnlocked($user->id),
         ]);
     }

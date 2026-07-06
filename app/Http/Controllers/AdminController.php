@@ -504,6 +504,8 @@ class AdminController extends Controller
 
         return view('admin.content', [
             'intro' => DB::table('game_contents')->where('key', 'intro_story')->first(),
+            'loginHelp' => DB::table('game_contents')->where('key', 'login_help')->first(),
+            'onboardingWelcome' => DB::table('game_contents')->where('key', 'meadow_onboarding_welcome')->first(),
             'locations' => DB::table('locations')->get(),
             'tasks' => DB::table('location_tasks')
                 ->join('locations', 'locations.id', '=', 'location_tasks.location_id')
