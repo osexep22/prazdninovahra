@@ -691,6 +691,8 @@ class AdminController extends Controller
             'description' => ['nullable', 'string'],
             'tooltip' => ['nullable', 'string', 'max:240'],
             'detail_text' => ['nullable', 'string'],
+            'min_colony_level' => ['required', 'integer', 'min:1', 'max:99'],
+            'is_available' => ['nullable', 'boolean'],
         ]);
         $building = DB::table('buildings')->find($id);
         abort_unless($building, 404);
@@ -698,8 +700,12 @@ class AdminController extends Controller
         $payload = [
             'name' => $data['name'],
             'description' => $data['description'] ?? '',
+            'min_colony_level' => (int) $data['min_colony_level'],
             'updated_at' => now(),
         ];
+        if (DB::getSchemaBuilder()->hasColumn('buildings', 'is_available')) {
+            $payload['is_available'] = $request->boolean('is_available');
+        }
         if (DB::getSchemaBuilder()->hasColumn('buildings', 'tooltip')) {
             $payload['tooltip'] = $data['tooltip'] ?? null;
         }

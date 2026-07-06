@@ -41,6 +41,14 @@
                 @csrf
                 <div class="grid">
                     <div><label>Název budovy</label><input name="name" value="{{ $building->name }}" required></div>
+                    <div><label>Úroveň kolonie pro stavbu</label><input name="min_colony_level" type="number" min="1" max="99" value="{{ $building->min_colony_level ?? 1 }}" required></div>
+                    <div class="stat">
+                        <label style="display:flex;align-items:center;gap:8px;margin:0">
+                            <input type="checkbox" name="is_available" value="1" style="width:auto" @checked((bool) ($building->is_available ?? true))>
+                            Lze stavět ve hře
+                        </label>
+                        <p class="small muted">Když je vypnuto, hráčům se budova v nabídce stavění nezobrazí.</p>
+                    </div>
                     <div>
                         <label>Tooltip v Mraveništi</label>
                         <input name="tooltip" value="{{ $building->tooltip ?: $tooltipFallback }}" maxlength="240">
