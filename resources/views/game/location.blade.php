@@ -24,7 +24,7 @@
 
     @if($state === 'completed')
         @if($locationImage)
-            <p><img src="{{ $locationImage }}" alt="" style="max-width:100%;width:100%;border-radius:8px"></p>
+            <p><img src="{{ \App\Support\AssetUrl::versioned($locationImage) }}" alt="" style="max-width:100%;width:100%;border-radius:8px"></p>
         @endif
 
         @if($storyText)
@@ -37,7 +37,7 @@
         @endif
     @else
         @if($locationImage)
-            <p><img src="{{ $locationImage }}" alt="" style="max-width:100%;width:100%;border-radius:8px"></p>
+            <p><img src="{{ \App\Support\AssetUrl::versioned($locationImage) }}" alt="" style="max-width:100%;width:100%;border-radius:8px"></p>
         @endif
 
         @if($storyText)

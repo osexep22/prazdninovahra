@@ -13,9 +13,9 @@
         <div class="modal-window story-window">
             <h2>{{ $intro->title }}</h2>
             @if($intro->body_top)<p>{!! nl2br(e($intro->body_top)) !!}</p>@endif
-            @if($intro->image_path)<img src="{{ $intro->image_path }}" alt="Úvodní příběh">@endif
+            @if($intro->image_path)<img src="{{ \App\Support\AssetUrl::versioned($intro->image_path) }}" alt="Úvodní příběh">@endif
             @if(($intro->body_middle ?? null))<p>{!! nl2br(e($intro->body_middle)) !!}</p>@endif
-            @if(($intro->image_path_2 ?? null))<img src="{{ $intro->image_path_2 }}" alt="Mravenci na paloučku">@endif
+            @if(($intro->image_path_2 ?? null))<img src="{{ \App\Support\AssetUrl::versioned($intro->image_path_2) }}" alt="Mravenci na paloučku">@endif
             @if($intro->body_bottom)<p>{!! nl2br(e($intro->body_bottom)) !!}</p>@endif
             <form method="post" action="/intro/seen">@csrf<button class="primary">Vydat se na palouk</button></form>
         </div>
@@ -79,7 +79,7 @@
                         : ($location->tooltip ?: $location->description);
                 @endphp
                 <div class="loc loc-{{ $location->slug }} {{ $location->state }}" data-description="{{ $tooltip }}" style="left:{{ $location->map_x }}%; top:{{ $location->map_y }}%;">
-                    <a href="/palouk/{{ $location->slug }}"><img src="{{ $asset }}" alt="{{ $location->name }}"><span>{{ $location->name }}</span></a>
+                    <a href="/palouk/{{ $location->slug }}"><img src="{{ \App\Support\AssetUrl::versioned($asset) }}" alt="{{ $location->name }}"><span>{{ $location->name }}</span></a>
                 </div>
             @endforeach
         </div>
