@@ -214,7 +214,9 @@ class QuickLaunchSeeder extends Seeder
             4 => '/assets/game/story/task-4-snek.png',
             5 => '/assets/game/story/task-5-stonozka.png',
             6 => '/assets/game/story/task-6-vodomerka.png',
+            7 => '/assets/game/story/task-7-beruska.png',
             8 => '/assets/game/story/task-8-vcela.png',
+            9 => '/assets/game/story/task-9-svetluska.png',
             10 => '/assets/game/story/task-10-kobylka.png',
         ];
 
@@ -225,7 +227,9 @@ class QuickLaunchSeeder extends Seeder
             4 => '/assets/game/completed/task-4-snek-completed.png',
             5 => '/assets/game/completed/task-5-stonozka-completed.png',
             6 => '/assets/game/completed/task-6-vodomerka-completed.png',
+            7 => '/assets/game/completed/task-7-beruska-completed.png',
             8 => '/assets/game/completed/task-8-vcela-completed.png',
+            9 => '/assets/game/completed/task-9-svetluska-completed.png',
             10 => '/assets/game/completed/task-10-kobylka-completed.png',
         ];
 
