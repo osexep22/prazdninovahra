@@ -20,10 +20,12 @@ return new class extends Migration
         if (! Schema::hasTable('building_task_customization_unlocks')) {
             Schema::create('building_task_customization_unlocks', function (Blueprint $table) {
                 $table->id();
-                $table->foreignId('building_task_id')->constrained('building_tasks')->cascadeOnDelete();
-                $table->foreignId('customization_unlock_id')->constrained('customization_unlocks')->cascadeOnDelete();
+                $table->unsignedBigInteger('building_task_id');
+                $table->unsignedBigInteger('customization_unlock_id');
                 $table->timestamps();
                 $table->unique(['building_task_id', 'customization_unlock_id'], 'btcu_task_unlock_unique');
+                $table->foreign('building_task_id', 'btcu_task_fk')->references('id')->on('building_tasks')->cascadeOnDelete();
+                $table->foreign('customization_unlock_id', 'btcu_unlock_fk')->references('id')->on('customization_unlocks')->cascadeOnDelete();
             });
         }
 
