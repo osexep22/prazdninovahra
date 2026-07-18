@@ -384,7 +384,11 @@ class GameController extends Controller
         $this->ensureAnthillUnlocked();
         abort_unless(DB::table('user_buildings')->where(['user_id' => Auth::id(), 'building_id' => $building->id])->exists(), 403);
 
-        $tasks = DB::table('building_tasks')->where('building_id', $building->id)->orderBy('sort_order')->get();
+        $tasks = DB::table('building_tasks')
+            ->where('building_id', $building->id)
+            ->when(Schema::hasColumn('building_tasks', 'is_active'), fn ($query) => $query->where('is_active', true))
+            ->orderBy('sort_order')
+            ->get();
         $progress = DB::table('user_building_task_progress')->where('user_id', Auth::id())->pluck('status', 'building_task_id');
         $completed = $progress->filter(fn ($status) => $status === 'completed')->count();
         $unlocks = DB::table('customization_unlocks')->where('building_id', $building->id)->get();
@@ -405,6 +409,13 @@ class GameController extends Controller
         abort_unless(DB::table('user_buildings')->where(['user_id' => Auth::id(), 'building_id' => $task->building_id])->exists(), 403);
         $data = $request->validate(['answer' => ['required', 'string', 'max:2000']]);
 
+        $alreadyCompleted = DB::table('user_building_task_progress')
+            ->where(['user_id' => Auth::id(), 'building_task_id' => $task->id, 'status' => 'completed'])
+            ->exists();
+        if ($alreadyCompleted) {
+            return back()->with('success', 'Úkol už máš splněný.');
+        }
+
         if (! Hash::check(AnswerNormalizer::normalize($data['answer']), $task->answer_hash)) {
             return back()->with('error', 'KĂłd zatĂ­m nesedĂ­.');
         }
@@ -421,17 +432,20 @@ class GameController extends Controller
                     ['unlocked_at' => now()]
                 );
             }
+            if (Schema::hasTable('building_task_customization_unlocks')) {
+                $unlockIds = DB::table('building_task_customization_unlocks')
+                    ->where('building_task_id', $task->id)
+                    ->pluck('customization_unlock_id');
+                foreach ($unlockIds as $unlockId) {
+                    DB::table('user_customization_unlocks')->updateOrInsert(
+                        ['user_id' => Auth::id(), 'customization_unlock_id' => $unlockId],
+                        ['unlocked_at' => now()]
+                    );
+                }
+            }
             $this->rewardUser($task->reward_prestige, $task->reward_resources, 0, 'building_task_completed', 'building_task', $task->id);
         });
-        $buildingTaskIds = DB::table('building_tasks')->where('building_id', $task->building_id)->pluck('id');
-        $doneCount = DB::table('user_building_task_progress')
-            ->where('user_id', Auth::id())
-            ->whereIn('building_task_id', $buildingTaskIds)
-            ->where('status', 'completed')
-            ->count();
-        if ($buildingTaskIds->count() > 0 && $doneCount === $buildingTaskIds->count()) {
-            $this->awardBadge('vsechny-ukoly-budovy', Auth::id(), 'building', $task->building_id);
-        }
+        $this->awardBuildingTaskBadges($task);
 
         return back()->with('success', 'SpeciĂˇlnĂ­ Ăşkol splnÄ›n.');
     }
@@ -472,7 +486,11 @@ class GameController extends Controller
             if ($unlock->type === 'variant' && isset($data['variants'][$unlock->key])) {
                 $options = json_decode((string) $unlock->options, true);
                 $value = (string) $data['variants'][$unlock->key];
-                if (is_array($options) && in_array($value, $options, true)) {
+                $allowedValues = collect(is_array($options) ? $options : [])
+                    ->map(fn ($option) => is_array($option) ? ($option['value'] ?? null) : $option)
+                    ->filter()
+                    ->all();
+                if (in_array($value, $allowedValues, true)) {
                     $filtered['variants'][$unlock->key] = $value;
                 }
             }
@@ -779,6 +797,29 @@ class GameController extends Controller
             'slug' => $slug,
             'prestige_bonus' => $badge->prestige_bonus,
         ]);
+    }
+
+    private function awardBuildingTaskBadges(object $task): void
+    {
+        $building = DB::table('buildings')->find($task->building_id);
+        if (! $building) {
+            return;
+        }
+
+        $slug = 'budova-' . $building->slug . '-ukol-' . (int) $task->sort_order;
+        $this->awardBadge($slug, Auth::id(), 'building_task', $task->id);
+
+        $completedCountQuery = DB::table('user_building_task_progress')
+            ->join('users', 'users.id', '=', 'user_building_task_progress.user_id')
+            ->where('user_building_task_progress.building_task_id', $task->id)
+            ->where('user_building_task_progress.status', 'completed');
+        if (Schema::hasColumn('users', 'is_test')) {
+            $completedCountQuery->where('users.is_test', false);
+        }
+
+        if ($completedCountQuery->count() <= 10) {
+            $this->awardBadge('top-10-' . $slug, Auth::id(), 'building_task', $task->id);
+        }
     }
 
     private function isTestUser(int $userId): bool

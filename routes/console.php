@@ -24,6 +24,7 @@ $contentTables = [
     'buildings',
     'building_tasks',
     'customization_unlocks',
+    'building_task_customization_unlocks',
     'badges',
     'announcements',
     'game_contents',

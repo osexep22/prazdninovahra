@@ -21,6 +21,7 @@
                     $placedConfig = $placedBuilding ? (json_decode((string) ($placedBuilding->customization_json ?? ''), true) ?: []) : [];
                     $placedColors = json_encode($placedConfig['colors'] ?? []);
                     $placedVariants = json_encode($placedConfig['variants'] ?? []);
+                    $placedPatterns = json_encode($placedConfig['patterns'] ?? []);
                 @endphp
                 @if(!$locked)
                     <div class="room slot"
@@ -29,9 +30,9 @@
                         style="left:{{ $slot->layout_x }}%; top:{{ $slot->layout_y }}%; width:{{ $slot->layout_w ?? 12 }}%; height:{{ $slot->layout_h ?? 12 }}%;">
                         @if($placedBuilding)
                             @if($readonly ?? false)
-                                <span class="room-svg" role="img" aria-label="{{ $placedBuilding->name }}" data-src="{{ $placedBuilding->svg_asset_path }}" data-colors='{{ $placedColors }}' data-variants='{{ $placedVariants }}'></span>
+                                <span class="room-svg" role="img" aria-label="{{ $placedBuilding->name }}" data-src="{{ $placedBuilding->svg_asset_path }}" data-colors='{{ $placedColors }}' data-variants='{{ $placedVariants }}' data-patterns='{{ $placedPatterns }}'></span>
                             @else
-                                <a href="/budovy/{{ $placedBuilding->slug }}" aria-label="{{ $placedBuilding->name }}"><span class="room-svg" data-src="{{ $placedBuilding->svg_asset_path }}" data-colors='{{ $placedColors }}' data-variants='{{ $placedVariants }}'></span></a>
+                                <a href="/budovy/{{ $placedBuilding->slug }}" aria-label="{{ $placedBuilding->name }}"><span class="room-svg" data-src="{{ $placedBuilding->svg_asset_path }}" data-colors='{{ $placedColors }}' data-variants='{{ $placedVariants }}' data-patterns='{{ $placedPatterns }}'></span></a>
                             @endif
                         @elseif($isOwned)
                             <img src="/assets/game/rooms/prazdna-mistnost.svg" alt="Prázdná komůrka">
@@ -223,9 +224,18 @@
                 });
                 const variants = parseJsonData(target.dataset.variants);
                 Object.entries(variants).forEach(([key, value]) => {
-                    findByOriginalPrefix(target, 'edit_variant__' + key + '__').forEach(el => el.style.opacity = '0');
-                    const variantTarget = findByOriginalId(target, 'edit_variant__' + key + '__' + value);
-                    if (variantTarget) variantTarget.style.opacity = '1';
+                    if (value === '__off') return;
+                    const variantTarget = findByOriginalId(target, value);
+                    if (variantTarget) {
+                        findByOriginalPrefix(target, value.replace(/__[^_]+$/, '__')).forEach(el => el.style.display = 'none');
+                        variantTarget.style.display = 'inline';
+                    }
+                });
+                const patterns = parseJsonData(target.dataset.patterns);
+                Object.entries(patterns).forEach(([key, value]) => {
+                    if (value === '__off') return;
+                    const patternTarget = findByOriginalId(target, value);
+                    if (patternTarget) patternTarget.style.display = 'inline';
                 });
             });
     });

@@ -84,15 +84,28 @@
                     @csrf
                     <div class="grid">
                         @foreach($unlocked as $unlock)
-                            @php($savedColor = data_get($customizationConfig, 'colors.' . $unlock->key))
+                            @php
+                                $savedColor = data_get($customizationConfig, 'colors.' . $unlock->key);
+                                $options = collect(json_decode($unlock->options, true) ?? [])->map(function ($option) {
+                                    return is_array($option)
+                                        ? ['value' => $option['value'] ?? '', 'label' => $option['label'] ?? ($option['value'] ?? '')]
+                                        : ['value' => $option, 'label' => $option];
+                                })->filter(fn ($option) => $option['value'] !== '')->values();
+                            @endphp
                             <div>
                                 <label>{{ $unlock->label }}</label>
                                 @if($unlock->type === 'color')
                                     <input class="custom-control" data-kind="color" data-key="{{ $unlock->key }}" data-saved="{{ $savedColor ? '1' : '0' }}" type="color" name="colors[{{ $unlock->key }}]" value="{{ $savedColor ?: '#ffffff' }}">
                                 @elseif($unlock->type === 'variant')
                                     <select class="custom-control" data-kind="variant" data-key="{{ $unlock->key }}" name="variants[{{ $unlock->key }}]">
-                                        @foreach(json_decode($unlock->options, true) ?? [] as $option)
-                                            <option value="{{ $option }}" @selected(data_get($customizationConfig, 'variants.' . $unlock->key) === $option)>{{ $option }}</option>
+                                        @foreach($options as $option)
+                                            <option value="{{ $option['value'] }}" @selected(data_get($customizationConfig, 'variants.' . $unlock->key) === $option['value'])>{{ $option['label'] }}</option>
+                                        @endforeach
+                                    </select>
+                                @elseif($unlock->type === 'pattern')
+                                    <select class="custom-control" data-kind="pattern" data-key="{{ $unlock->key }}" name="patterns[{{ $unlock->key }}]">
+                                        @foreach($options as $option)
+                                            <option value="{{ $option['value'] }}" @selected(data_get($customizationConfig, 'patterns.' . $unlock->key) === $option['value'])>{{ $option['label'] }}</option>
                                         @endforeach
                                     </select>
                                 @endif
@@ -116,14 +129,31 @@
             if (kind === 'color') {
                 if (control.dataset.saved === '1' || control.dataset.dirty === '1') {
                     preview.style.setProperty(`--${key}`, control.value);
-                    const target = preview.querySelector('#edit_color__' + key);
+                    const target = preview.querySelector('#edit_color__' + CSS.escape(key));
                     if (target) target.setAttribute('fill', control.value);
                 }
             }
             if (kind === 'variant') {
-                preview.querySelectorAll('[id^="edit_variant__' + key + '__"]').forEach(el => el.style.opacity = '0');
-                const target = preview.querySelector('#edit_variant__' + key + '__' + control.value);
-                if (target) target.style.opacity = '1';
+                const values = Array.from(control.options).map(option => option.value).filter(value => value !== '__off');
+                values.forEach(value => {
+                    const target = preview.querySelector('#' + CSS.escape(value));
+                    if (target) target.style.display = 'none';
+                });
+                if (control.value !== '__off') {
+                    const target = preview.querySelector('#' + CSS.escape(control.value));
+                    if (target) target.style.display = 'inline';
+                }
+            }
+            if (kind === 'pattern') {
+                const values = Array.from(control.options).map(option => option.value).filter(value => value !== '__off');
+                values.forEach(value => {
+                    const target = preview.querySelector('#' + CSS.escape(value));
+                    if (target) target.style.display = 'none';
+                });
+                if (control.value !== '__off') {
+                    const target = preview.querySelector('#' + CSS.escape(control.value));
+                    if (target) target.style.display = 'inline';
+                }
             }
         });
     };

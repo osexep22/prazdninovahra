@@ -386,6 +386,7 @@ class AdminController extends Controller
             'buildingTasks' => DB::table('building_tasks')
                 ->join('buildings', 'buildings.id', '=', 'building_tasks.building_id')
                 ->whereIn('buildings.slug', $anthillBuildingSlugs)
+                ->when(DB::getSchemaBuilder()->hasColumn('building_tasks', 'is_active'), fn ($query) => $query->where('building_tasks.is_active', true))
                 ->select('building_tasks.id', 'building_tasks.title', 'building_tasks.reward_prestige', 'building_tasks.reward_resources', 'buildings.name as building_name')
                 ->orderBy('buildings.name')
                 ->orderBy('building_tasks.sort_order')
@@ -437,7 +438,7 @@ class AdminController extends Controller
             }
             if (array_key_exists('badge.building_task.prestige_bonus', $data['settings'] ?? [])) {
                 DB::table('badges')
-                    ->whereIn('slug', ['vsechny-ukoly-budovy', 'prvni-budova', 'pet-budov'])
+                    ->where('slug', 'like', 'budova-%-ukol-%')
                     ->update([
                         'prestige_bonus' => (int) $data['settings']['badge.building_task.prestige_bonus'],
                         'updated_at' => now(),
@@ -486,7 +487,7 @@ class AdminController extends Controller
             }
             if (array_key_exists('badge.building_task.prestige_bonus', $data['settings'] ?? [])) {
                 DB::table('badges')
-                    ->whereIn('slug', ['vsechny-ukoly-budovy', 'prvni-budova', 'pet-budov'])
+                    ->where('slug', 'like', 'budova-%-ukol-%')
                     ->update([
                         'prestige_bonus' => (int) $data['settings']['badge.building_task.prestige_bonus'],
                         'updated_at' => now(),
@@ -532,6 +533,7 @@ class AdminController extends Controller
             'buildingTasks' => DB::table('building_tasks')
                 ->join('buildings', 'buildings.id', '=', 'building_tasks.building_id')
                 ->whereIn('buildings.slug', $anthillBuildingSlugs)
+                ->when(DB::getSchemaBuilder()->hasColumn('building_tasks', 'is_active'), fn ($query) => $query->where('building_tasks.is_active', true))
                 ->select('building_tasks.*', 'buildings.name as building_name')
                 ->orderBy('buildings.id')
                 ->orderBy('building_tasks.sort_order')
@@ -654,6 +656,7 @@ class AdminController extends Controller
             'required_for_completion' => ['nullable'],
             'pdf' => ['nullable', 'file', 'mimes:pdf', 'max:10240'],
             'existing_pdf_path' => ['nullable', 'string', 'max:255'],
+            'is_active' => ['nullable', 'boolean'],
         ]);
         $task = DB::table('location_tasks')->find($id);
         abort_unless($task, 404);
@@ -754,6 +757,9 @@ class AdminController extends Controller
         if (DB::getSchemaBuilder()->hasColumn('building_tasks', 'unlock_description')) {
             $payload['unlock_description'] = $data['unlock_description'] ?? null;
         }
+        if (DB::getSchemaBuilder()->hasColumn('building_tasks', 'is_active')) {
+            $payload['is_active'] = $request->boolean('is_active');
+        }
         if (($data['answer'] ?? '') !== '') {
             $payload['answer_hash'] = Hash::make(AnswerNormalizer::normalize($data['answer']));
         }
@@ -818,7 +824,11 @@ class AdminController extends Controller
             abort_unless(DB::table('user_buildings')->where(['user_id' => $previewPlayer->id, 'building_id' => $building->id])->exists(), 404);
         }
 
-        $tasks = DB::table('building_tasks')->where('building_id', $building->id)->orderBy('sort_order')->get();
+        $tasks = DB::table('building_tasks')
+            ->where('building_id', $building->id)
+            ->when(DB::getSchemaBuilder()->hasColumn('building_tasks', 'is_active'), fn ($query) => $query->where('is_active', true))
+            ->orderBy('sort_order')
+            ->get();
         $progress = $previewPlayer
             ? DB::table('user_building_task_progress')->where('user_id', $previewPlayer->id)->pluck('status', 'building_task_id')
             : collect();

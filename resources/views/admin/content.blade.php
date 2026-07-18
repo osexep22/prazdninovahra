@@ -75,6 +75,12 @@
                             <div><label>Pořadí</label><input name="sort_order" type="number" min="1" value="{{ $task->sort_order ?? 1 }}" required></div>
                             <div><label>Prestiž</label><input name="reward_prestige" type="number" min="0" value="{{ $task->reward_prestige }}" required></div>
                             <div><label>Suroviny</label><input name="reward_resources" type="number" min="0" value="{{ $task->reward_resources }}" required></div>
+                            <div class="stat">
+                                <label style="display:flex;align-items:center;gap:8px;margin:0">
+                                    <input type="checkbox" name="is_active" value="1" style="width:auto" @checked((bool) ($task->is_active ?? true))>
+                                    Zobrazit ve hře
+                                </label>
+                            </div>
                         </div>
                         <label>Text podúkolu</label>
                         <textarea name="body" rows="5" required>{{ $task->body }}</textarea>
