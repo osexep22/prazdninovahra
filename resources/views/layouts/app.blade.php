@@ -32,7 +32,21 @@
                 ->count();
         }
     }
-    $badges = $me ? DB::table('user_badges')->join('badges', 'badges.id', '=', 'user_badges.badge_id')->where('user_id', $me->id)->select('badges.name', 'badges.description', 'badges.icon_path')->orderByDesc('user_badges.awarded_at')->get() : collect();
+    $badges = $me ? DB::table('user_badges')->join('badges', 'badges.id', '=', 'user_badges.badge_id')->where('user_id', $me->id)->select('badges.slug', 'badges.name', 'badges.description', 'badges.icon_path')->orderByDesc('user_badges.awarded_at')->get() : collect();
+    $compactBadges = $badges;
+    if ($badges->count() > 20) {
+        $topBadgeBaseSlugs = $badges
+            ->pluck('slug')
+            ->filter(fn ($slug) => str_starts_with($slug, 'top-10-'))
+            ->flatMap(function ($slug) {
+                $baseSlug = substr($slug, 7);
+
+                return [$baseSlug, 'lokace-' . $baseSlug];
+            })
+            ->flip();
+
+        $compactBadges = $badges->reject(fn ($badge) => ! str_starts_with($badge->slug, 'top-10-') && $topBadgeBaseSlugs->has($badge->slug));
+    }
     $anthillUnlocked = $me ? DB::table('user_location_progress')
         ->join('locations', 'locations.id', '=', 'user_location_progress.location_id')
         ->where('user_location_progress.user_id', $me->id)
@@ -80,7 +94,7 @@
         .auth-footer span { color:#65758b; font-weight:700; } .auth-footer a { color:#235c80; font-weight:900; }
         .side { background:var(--panel); border:1px solid #ead9b7; border-radius:8px; padding:14px; align-self:start; position:sticky; top:74px; }
         body.is-meadow .side, body.is-anthill .side { position:fixed; right:18px; top:86px; z-index:35; width:116px; min-height:116px; padding:10px; border-radius:999px; background:rgba(255,250,240,.92); box-shadow:0 18px 48px rgba(40,55,29,.22); overflow:hidden; transition:width .18s ease, border-radius .18s ease, padding .18s ease; }
-        body.is-meadow .side:hover, body.is-meadow .side:focus-within, body.is-meadow .side.force-open, body.is-anthill .side:hover, body.is-anthill .side:focus-within, body.is-anthill .side.force-open { width:300px; border-radius:18px; padding:14px; overflow:visible; }
+        body.is-meadow .side:hover, body.is-meadow .side:focus-within, body.is-meadow .side.force-open, body.is-anthill .side:hover, body.is-anthill .side:focus-within, body.is-anthill .side.force-open { width:min(620px, calc(100vw - 36px)); border-radius:18px; padding:14px; overflow:visible; }
         body.is-meadow .side h3, body.is-anthill .side h3 { text-align:center; margin-bottom:2px; }
         body.is-meadow .side > p, body.is-meadow .side .stats, body.is-meadow .side h3:nth-of-type(2), body.is-meadow .side .small + p, body.is-anthill .side > p, body.is-anthill .side .stats, body.is-anthill .side h3:nth-of-type(2), body.is-anthill .side .small + p { opacity:0; max-height:0; overflow:hidden; margin:0; transition:opacity .18s ease, max-height .18s ease, margin .18s ease; }
         body.is-meadow .side:hover > p, body.is-meadow .side:hover .stats, body.is-meadow .side:hover h3:nth-of-type(2), body.is-meadow .side:hover .small + p, body.is-meadow .side:focus-within > p, body.is-meadow .side:focus-within .stats, body.is-meadow .side:focus-within h3:nth-of-type(2), body.is-meadow .side:focus-within .small + p, body.is-meadow .side.force-open > p, body.is-meadow .side.force-open .stats, body.is-meadow .side.force-open h3:nth-of-type(2), body.is-meadow .side.force-open .small + p, body.is-anthill .side:hover > p, body.is-anthill .side:hover .stats, body.is-anthill .side:hover h3:nth-of-type(2), body.is-anthill .side:hover .small + p, body.is-anthill .side:focus-within > p, body.is-anthill .side:focus-within .stats, body.is-anthill .side:focus-within h3:nth-of-type(2), body.is-anthill .side:focus-within .small + p, body.is-anthill .side.force-open > p, body.is-anthill .side.force-open .stats, body.is-anthill .side.force-open h3:nth-of-type(2), body.is-anthill .side.force-open .small + p { opacity:1; max-height:260px; margin-top:10px; }
@@ -107,7 +121,14 @@
         .stat-help-item { border-left:4px solid #d8a928; border-radius:8px; background:#fffdf0; padding:10px 12px; }
         .stat-help-item b { display:block; margin-bottom:3px; color:#2f4f2f; }
         .stat-help-item p { margin:0; }
-        .badge-strip { display:flex; flex-wrap:wrap; gap:7px; margin-top:8px; } .badge-icon { width:42px; height:42px; border-radius:50%; border:0; background:transparent; object-fit:contain; padding:0; filter:drop-shadow(0 5px 8px rgba(82,55,28,.18)); }
+        .badge-strip { display:flex; flex-wrap:wrap; gap:7px; margin-top:8px; }
+        .badge-strip-full { display:none; }
+        .badge-strip-compact { max-height:140px; overflow:hidden; }
+        body:not(.is-meadow):not(.is-anthill) .badge-strip-compact { display:none; }
+        body:not(.is-meadow):not(.is-anthill) .badge-strip-full { display:flex; flex-wrap:wrap; }
+        body.is-meadow .side:hover .badge-strip-compact, body.is-meadow .side:focus-within .badge-strip-compact, body.is-meadow .side.force-open .badge-strip-compact, body.is-anthill .side:hover .badge-strip-compact, body.is-anthill .side:focus-within .badge-strip-compact, body.is-anthill .side.force-open .badge-strip-compact { display:none; }
+        body.is-meadow .side:hover .badge-strip-full, body.is-meadow .side:focus-within .badge-strip-full, body.is-meadow .side.force-open .badge-strip-full, body.is-anthill .side:hover .badge-strip-full, body.is-anthill .side:focus-within .badge-strip-full, body.is-anthill .side.force-open .badge-strip-full { display:grid; grid-auto-flow:column; grid-template-rows:repeat(var(--badge-panel-rows, 6), 42px); grid-auto-columns:42px; gap:7px; align-items:center; justify-content:start; max-width:100%; overflow-x:auto; overflow-y:visible; padding:2px 0 8px; }
+        .badge-icon { width:42px; height:42px; border-radius:50%; border:0; background:transparent; object-fit:contain; padding:0; filter:drop-shadow(0 5px 8px rgba(82,55,28,.18)); }
         .badge-tip { position:relative; display:inline-flex; align-items:center; justify-content:center; }
         .badge-tip::after { content:attr(data-tooltip); position:absolute; left:50%; bottom:calc(100% + 8px); z-index:1200; width:max-content; max-width:min(260px, calc(100vw - 24px)); padding:8px 10px; border-radius:7px; background:#172033; color:#eef6ff; border:1px solid #2e3a52; box-shadow:0 12px 28px rgba(0,0,0,.22); font-size:12px; line-height:1.35; opacity:0; pointer-events:none; transform:translate(-50%, 4px); transition:.12s ease; }
         .badge-tip::before { content:''; position:absolute; left:50%; bottom:calc(100% + 2px); z-index:1201; border:6px solid transparent; border-top-color:#172033; opacity:0; transform:translateX(-50%); transition:.12s ease; }
@@ -267,6 +288,8 @@
             body.is-meadow .side h3:nth-of-type(2), body.is-anthill .side h3:nth-of-type(2) { grid-column:1 / -1; text-align:left; margin:6px 0 0; }
             body.is-meadow .side h3:nth-of-type(2) + p, body.is-anthill .side h3:nth-of-type(2) + p { grid-column:1 / -1; }
             body.is-meadow .side > p, body.is-meadow .side .stats, body.is-meadow .side h3:nth-of-type(2), body.is-meadow .side .small + p, body.is-anthill .side > p, body.is-anthill .side .stats, body.is-anthill .side h3:nth-of-type(2), body.is-anthill .side .small + p { opacity:1; max-height:none; overflow:visible; transition:none; }
+            body.is-meadow .side:hover .badge-strip-compact, body.is-meadow .side:focus-within .badge-strip-compact, body.is-meadow .side.force-open .badge-strip-compact, body.is-anthill .side:hover .badge-strip-compact, body.is-anthill .side:focus-within .badge-strip-compact, body.is-anthill .side.force-open .badge-strip-compact { display:flex; }
+            body.is-meadow .side:hover .badge-strip-full, body.is-meadow .side:focus-within .badge-strip-full, body.is-meadow .side.force-open .badge-strip-full, body.is-anthill .side:hover .badge-strip-full, body.is-anthill .side:focus-within .badge-strip-full, body.is-anthill .side.force-open .badge-strip-full { display:none; }
             body.is-meadow .meadow-hero { height:auto; min-height:0; overflow:visible; padding-top:var(--topbar-h); }
             body.is-meadow .meadow-board { position:relative; top:auto; height:auto; aspect-ratio:1 / 1; width:100vw; max-height:calc(100dvh - var(--topbar-h)); background:#94c86a; }
             body.is-meadow .meadow-map { inset:0 auto auto 50%; top:0; height:100%; width:auto; max-height:none; transform:translateX(-50%); }
@@ -335,7 +358,14 @@
                 <p>Nové zprávy: <b>{{ $newMessages }}</b></p>
                 <h3>Odznáčky</h3>
                 @if($badges->isNotEmpty())
-                    <div class="badge-strip">
+                    <div class="badge-strip badge-strip-compact" aria-label="Odznáčky">
+                        @foreach($compactBadges as $badge)
+                            <span class="badge-tip" tabindex="0" data-tooltip="{{ $badge->description ?: $badge->name }}">
+                                <img class="badge-icon" src="{{ $badge->icon_path ?: '/assets/badges/default.png' }}" alt="{{ $badge->name }}">
+                            </span>
+                        @endforeach
+                    </div>
+                    <div class="badge-strip badge-strip-full" aria-label="Všechny odznáčky">
                         @foreach($badges as $badge)
                             <span class="badge-tip" tabindex="0" data-tooltip="{{ $badge->description ?: $badge->name }}">
                                 <img class="badge-icon" src="{{ $badge->icon_path ?: '/assets/badges/default.png' }}" alt="{{ $badge->name }}">
@@ -433,6 +463,16 @@
                     badge.addEventListener('mouseenter', () => alignBadgeTooltip(badge));
                     badge.addEventListener('focus', () => alignBadgeTooltip(badge));
                 });
+
+                const tuneBadgePanelRows = () => {
+                    document.querySelectorAll('.side').forEach((side) => {
+                        const availableHeight = Math.max(210, window.innerHeight - side.getBoundingClientRect().top - 28);
+                        const rows = Math.max(3, Math.min(9, Math.floor((availableHeight - 220) / 49)));
+                        side.style.setProperty('--badge-panel-rows', rows);
+                    });
+                };
+                tuneBadgePanelRows();
+                window.addEventListener('resize', tuneBadgePanelRows);
 
                 const anthillFlashModal = document.getElementById('anthill-flash-modal');
                 if (anthillFlashModal) {
