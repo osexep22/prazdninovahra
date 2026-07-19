@@ -185,6 +185,13 @@ return new class extends Migration
             $this->upsertUnlock($buildingId, 'color', $slug === 'hudebna' ? '4__stena_komory' : '4__stena', 'Barva stěny');
             $this->upsertUnlock($buildingId, 'color', '2__koberec', 'Barva koberce');
             $this->upsertUnlock($buildingId, 'pattern', '5__vzor-na-zdi', 'Vzor na zdi', array_merge([['__off', 'Vypnuto']], $patterns[$slug] ?? []));
+            if ($slug === 'hudebna') {
+                $this->upsertUnlock($buildingId, 'pattern', '2__vzor-koberce', 'Vzor koberce', [
+                    ['__off', 'Vypnuto'],
+                    ['edit_pattern__2__kytky', 'Kytky'],
+                    ['edit_pattern__2__kosoctverce', 'Kosočtverce'],
+                ]);
+            }
             if ($slug !== 'zahradnik') {
                 $this->upsertUnlock($buildingId, 'variant', '6__lustr', 'Lustr', [
                     ['__off', 'Bez lustru'],
@@ -220,6 +227,8 @@ return new class extends Migration
             ['kuchyn', 1, 'variant', ['3__jidlo']],
             ['kuchyn', 2, 'variant', ['3__jidlo', '3__voda']],
             ['kuchyn', 2, 'color', ['3__stul', '3__hrnec']],
+            ['krejci', 1, 'pattern', ['2__vzor-koberce']],
+            ['krejci', 2, 'pattern', ['2__vzor-koberce']],
             ['obyvak', 1, 'variant', ['5__bryle']],
             ['porodnice', 1, 'variant', ['9__otevreno']],
             ['malir', 1, 'variant', ['4__obraz']],

@@ -200,8 +200,8 @@ class DatabaseSeeder extends Seeder
 
         foreach ([
             ['vsechny-ukoly-budovy', 'Dokončení všech úkolů budovy', 80, '/assets/badges/building-master.png'],
-            ['prvni-budova', 'První postavená budova', 30, '/assets/badges/first-room.png'],
-            ['pet-budov', '5 postavených budov', 100, '/assets/badges/five-rooms.png'],
+            ['prvni-budova', 'První komůrka', 30, '/assets/badges/prvni-budova.svg'],
+            ['pet-budov', 'Rozrůstající se domov', 100, '/assets/badges/pet-budov.svg'],
             ['adminsky-odznacek', 'Adminský odznáček', 0, '/assets/badges/admin.png'],
         ] as [$slug, $name, $bonus, $icon]) {
             DB::table('badges')->insert([

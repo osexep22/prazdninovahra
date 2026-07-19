@@ -762,6 +762,10 @@ class GameController extends Controller
             return $sourceTaskOrder >= 2 ? 'full' : 'basic_pattern';
         }
 
+        if ($unlock->type === 'pattern' && $unlock->key === '2__vzor-koberce' && $sourceSlug === 'krejci') {
+            return $sourceTaskOrder >= 2 ? 'full' : 'basic_pattern';
+        }
+
         return 'full';
     }
 
@@ -791,6 +795,12 @@ class GameController extends Controller
         }
 
         if ($unlock->key === '5__vzor-na-zdi' && $mode === 'basic_pattern') {
+            $off = in_array('__off', $values, true) ? ['__off'] : [];
+            $editable = array_values(array_filter($values, fn ($value) => $value !== '__off'));
+            return array_merge($off, array_slice($editable, 0, (int) ceil(count($editable) / 2)));
+        }
+
+        if ($unlock->key === '2__vzor-koberce' && $mode === 'basic_pattern') {
             $off = in_array('__off', $values, true) ? ['__off'] : [];
             $editable = array_values(array_filter($values, fn ($value) => $value !== '__off'));
             return array_merge($off, array_slice($editable, 0, (int) ceil(count($editable) / 2)));

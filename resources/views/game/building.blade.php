@@ -174,10 +174,27 @@
 
 <script>
     const preview = document.getElementById('svg-preview');
+    const initialOptionalDisplays = new Map();
     const hideOptionalSvgParts = (root) => {
         root.querySelectorAll('[id^="edit_variant__"], [id^="edit_pattern__"]').forEach(target => {
+            initialOptionalDisplays.set(target.id, target.style.display || target.getAttribute('display') || '');
             target.style.display = 'none';
         });
+    };
+    const showSvgVariant = (target) => {
+        target.style.display = 'inline';
+        target.querySelectorAll('[id^="edit_variant__"], [id^="edit_pattern__"]').forEach(child => {
+            const initial = initialOptionalDisplays.get(child.id);
+            if (initial && initial !== 'none') {
+                child.style.display = initial;
+            }
+        });
+    };
+    const hideClosedSiblingForOpenVariant = (value) => {
+        if (!value.includes('__otevreno')) return;
+        const closedValue = value.replace('__otevreno', '__zavreno');
+        const closed = preview.querySelector('#' + CSS.escape(closedValue));
+        if (closed) closed.style.display = 'none';
     };
     const setSvgFill = (target, value) => {
         const paint = (element) => {
@@ -271,7 +288,10 @@
                 });
                 if (control.value !== '__off') {
                     const target = preview.querySelector('#' + CSS.escape(control.value));
-                    if (target) target.style.display = 'inline';
+                    if (target) {
+                        showSvgVariant(target);
+                        hideClosedSiblingForOpenVariant(control.value);
+                    }
                 }
             }
             if (kind === 'pattern') {
@@ -282,7 +302,7 @@
                 });
                 if (control.value !== '__off') {
                     const target = preview.querySelector('#' + CSS.escape(control.value));
-                    if (target) target.style.display = 'inline';
+                    if (target) showSvgVariant(target);
                 }
             }
         });
