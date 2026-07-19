@@ -189,7 +189,7 @@ class GameController extends Controller
             });
         $ownedSlots = DB::table('user_building_slots')->where('user_id', $userId)->pluck('building_slot_id')->all();
         $buildingHasTooltip = Schema::hasColumn('buildings', 'tooltip');
-        $placed = DB::table('user_buildings')
+        $placedBuildings = DB::table('user_buildings')
             ->join('buildings', 'buildings.id', '=', 'user_buildings.building_id')
             ->leftJoin('user_building_customizations', function ($join) use ($userId) {
                 $join->on('user_building_customizations.building_id', '=', 'buildings.id')
@@ -204,10 +204,13 @@ class GameController extends Controller
                 $buildingHasTooltip ? 'buildings.tooltip' : DB::raw('NULL as tooltip'),
                 'user_building_customizations.config_json as customization_json'
             )
-            ->get()
-            ->map(function ($building) use ($userId) {
-                $unlocks = DB::table('customization_unlocks')->where('building_id', $building->building_id)->get();
-                $access = $this->customizationAccessForBuilding($userId, (int) $building->building_id, $unlocks);
+            ->get();
+        $unlocksByBuilding = $this->customizationUnlocksByBuilding($placedBuildings->pluck('building_id')->unique()->all());
+        $accessByBuilding = $this->customizationAccessForBuildings($userId, $unlocksByBuilding);
+        $placed = $placedBuildings
+            ->map(function ($building) use ($unlocksByBuilding, $accessByBuilding) {
+                $unlocks = $unlocksByBuilding->get($building->building_id, collect());
+                $access = $accessByBuilding[$building->building_id] ?? [];
                 $config = json_decode((string) ($building->customization_json ?? ''), true);
                 if (! is_array($config)) {
                     $config = [];
@@ -246,6 +249,19 @@ class GameController extends Controller
             ->all();
 
         return view('game.anthill', compact('slots', 'ownedSlots', 'placed', 'buildings', 'ownedBuildingIds', 'readonly', 'owner', 'anthillVariant', 'anthillScale', 'capacity', 'availableExpansions', 'expansionCosts'));
+    }
+
+    private function customizationUnlocksByBuilding(array $buildingIds)
+    {
+        $buildingIds = array_values(array_filter(array_unique($buildingIds)));
+        if (empty($buildingIds)) {
+            return collect();
+        }
+
+        return DB::table('customization_unlocks')
+            ->whereIn('building_id', $buildingIds)
+            ->get()
+            ->groupBy('building_id');
     }
 
     private function anthillSlotLayouts(int $capacity): array
@@ -579,6 +595,7 @@ class GameController extends Controller
                 }
             }
         }
+        $filtered = $this->sanitizeCustomizationDependencies($filtered);
 
         DB::table('user_building_customizations')->updateOrInsert(
             ['user_id' => $user->id, 'building_id' => $buildingId],
@@ -594,6 +611,23 @@ class GameController extends Controller
     {
         $this->syncCustomizationUnlocksFromCompletedTasks($userId);
 
+        return $this->buildCustomizationAccessForUnlocks($userId, $buildingId, $unlocks);
+    }
+
+    private function customizationAccessForBuildings(int $userId, $unlocksByBuilding): array
+    {
+        $this->syncCustomizationUnlocksFromCompletedTasks($userId);
+
+        $access = [];
+        foreach ($unlocksByBuilding as $buildingId => $unlocks) {
+            $access[$buildingId] = $this->buildCustomizationAccessForUnlocks($userId, (int) $buildingId, $unlocks);
+        }
+
+        return $access;
+    }
+
+    private function buildCustomizationAccessForUnlocks(int $userId, int $buildingId, $unlocks): array
+    {
         $unlocksById = $unlocks->keyBy('id');
         $access = [];
 
@@ -616,6 +650,9 @@ class GameController extends Controller
                 }
 
                 $mode = $this->customizationUnlockMode($unlock, $link->source_slug, (int) $link->sort_order);
+                if (! $mode) {
+                    continue;
+                }
                 if (($access[$unlock->id]['mode'] ?? null) !== 'full') {
                     $access[$unlock->id] = [
                         'mode' => $mode,
@@ -654,6 +691,8 @@ class GameController extends Controller
             }
         }
 
+        $this->addAlwaysAvailableCustomizationAccess($buildingId, $unlocks, $access);
+
         return $access;
     }
 
@@ -678,7 +717,26 @@ class GameController extends Controller
         }
     }
 
-    private function customizationUnlockMode(object $unlock, string $sourceSlug, int $sourceTaskOrder): string
+    private function addAlwaysAvailableCustomizationAccess(int $buildingId, $unlocks, array &$access): void
+    {
+        $buildingSlug = DB::table('buildings')->where('id', $buildingId)->value('slug');
+        if ($buildingSlug !== 'hospoda') {
+            return;
+        }
+
+        $pivoUnlock = $unlocks->first(fn ($unlock) => $unlock->type === 'variant' && $unlock->key === '3__pivo');
+        if (! $pivoUnlock || isset($access[$pivoUnlock->id])) {
+            return;
+        }
+
+        $access[$pivoUnlock->id] = [
+            'mode' => 'full',
+            'palette' => [],
+            'allowed_values' => $this->allowedOptionValues($pivoUnlock, 'full'),
+        ];
+    }
+
+    private function customizationUnlockMode(object $unlock, string $sourceSlug, int $sourceTaskOrder): ?string
     {
         if ($unlock->type === 'color' && in_array($unlock->key, ['4__stena', '4__stena_komory'], true) && $sourceSlug === 'malir') {
             return $sourceTaskOrder >= 2 ? 'full' : 'basic';
@@ -694,6 +752,10 @@ class GameController extends Controller
 
         if ($unlock->type === 'variant' && $unlock->key === '3__jidlo' && $sourceSlug === 'kuchyn') {
             return $sourceTaskOrder >= 2 ? 'full' : 'basic_food';
+        }
+
+        if ($unlock->type === 'variant' && $unlock->key === '3__voda' && $sourceSlug === 'kuchyn') {
+            return null;
         }
 
         if ($unlock->type === 'pattern' && $unlock->key === '5__vzor-na-zdi' && $sourceSlug === 'obyvak') {
@@ -771,7 +833,22 @@ class GameController extends Controller
             }
         }
 
-        return $clean;
+        return $this->sanitizeCustomizationDependencies($clean);
+    }
+
+    private function sanitizeCustomizationDependencies(array $config): array
+    {
+        $selectedLustr = data_get($config, 'variants.6__lustr');
+        foreach (array_keys($config['colors'] ?? []) as $key) {
+            if (preg_match('/^6__lustr__(\d+)$/', (string) $key, $match)) {
+                $requiredVariant = 'edit_variant__6__lustr__' . $match[1];
+                if ($selectedLustr !== $requiredVariant) {
+                    unset($config['colors'][$key]);
+                }
+            }
+        }
+
+        return $config;
     }
 
     private function basicColorPalette(): array

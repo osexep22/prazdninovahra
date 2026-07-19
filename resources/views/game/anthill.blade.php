@@ -246,7 +246,6 @@
                     if (value === '__off') return;
                     const variantTarget = findByOriginalId(target, value);
                     if (variantTarget) {
-                        findByOriginalPrefix(target, value.replace(/__[^_]+$/, '__')).forEach(el => el.style.display = 'none');
                         variantTarget.style.display = 'inline';
                     }
                 });
