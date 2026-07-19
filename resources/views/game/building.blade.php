@@ -94,6 +94,9 @@
                                         ? ['value' => $option['value'] ?? '', 'label' => $option['label'] ?? ($option['value'] ?? '')]
                                         : ['value' => $option, 'label' => $option];
                                 })->filter(fn ($option) => $option['value'] !== '')->values();
+                                if (!empty($access['allowed_values'])) {
+                                    $options = $options->whereIn('value', $access['allowed_values'])->values();
+                                }
                             @endphp
                             <div>
                                 <label>{{ $unlock->label }}</label>
@@ -111,13 +114,13 @@
                                 @elseif($unlock->type === 'variant')
                                     <select class="custom-control" data-kind="variant" data-key="{{ $unlock->key }}" name="variants[{{ $unlock->key }}]">
                                         @foreach($options as $option)
-                                            <option value="{{ $option['value'] }}" @selected(data_get($customizationConfig, 'variants.' . $unlock->key) === $option['value'])>{{ $option['label'] }}</option>
+                                            <option value="{{ $option['value'] }}" @selected((data_get($customizationConfig, 'variants.' . $unlock->key) ?? '__off') === $option['value'])>{{ $option['label'] }}</option>
                                         @endforeach
                                     </select>
                                 @elseif($unlock->type === 'pattern')
                                     <select class="custom-control" data-kind="pattern" data-key="{{ $unlock->key }}" name="patterns[{{ $unlock->key }}]">
                                         @foreach($options as $option)
-                                            <option value="{{ $option['value'] }}" @selected(data_get($customizationConfig, 'patterns.' . $unlock->key) === $option['value'])>{{ $option['label'] }}</option>
+                                            <option value="{{ $option['value'] }}" @selected((data_get($customizationConfig, 'patterns.' . $unlock->key) ?? '__off') === $option['value'])>{{ $option['label'] }}</option>
                                         @endforeach
                                     </select>
                                 @endif
@@ -134,6 +137,11 @@
 
 <script>
     const preview = document.getElementById('svg-preview');
+    const hideOptionalSvgParts = (root) => {
+        root.querySelectorAll('[id^="edit_variant__"], [id^="edit_pattern__"]').forEach(target => {
+            target.style.display = 'none';
+        });
+    };
     const setSvgFill = (target, value) => {
         const paint = (element) => {
             element.setAttribute('fill', value);
@@ -187,6 +195,7 @@
         .then(response => response.text())
         .then(svg => {
             preview.innerHTML = svg;
+            hideOptionalSvgParts(preview);
             document.querySelectorAll('.custom-control').forEach(control => control.addEventListener('input', () => {
                 control.dataset.dirty = '1';
                 applyCustomization();

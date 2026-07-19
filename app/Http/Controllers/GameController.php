@@ -73,7 +73,7 @@ class GameController extends Controller
         $state = $states[$location->id]->state ?? 'locked';
 
         if ($state === 'locked') {
-            return redirect('/palouk')->with('error', 'Lokace je zatĂ­m zamÄŤenĂˇ.');
+            return redirect('/palouk')->with('error', 'Lokace je zatím zamčená.');
         }
 
         $tasks = DB::table('location_tasks')->where('location_id', $location->id)->orderBy('sort_order')->get();
@@ -205,6 +205,17 @@ class GameController extends Controller
                 'user_building_customizations.config_json as customization_json'
             )
             ->get()
+            ->map(function ($building) use ($userId) {
+                $unlocks = DB::table('customization_unlocks')->where('building_id', $building->building_id)->get();
+                $access = $this->customizationAccessForBuilding($userId, (int) $building->building_id, $unlocks);
+                $config = json_decode((string) ($building->customization_json ?? ''), true);
+                if (! is_array($config)) {
+                    $config = [];
+                }
+                $building->customization_json = json_encode($this->sanitizeCustomizationConfig($config, $access, $unlocks));
+
+                return $building;
+            })
             ->keyBy('building_slot_id');
         $buildingQuery = DB::table('buildings')->orderBy('min_colony_level')->orderBy('name');
         if (Schema::hasColumn('buildings', 'is_available')) {
@@ -266,13 +277,13 @@ class GameController extends Controller
         $user = Auth::user();
 
         if ($slot->required_colony_level > $user->colony_level) {
-            return back()->with('error', 'Kolonie jeĹˇtÄ› nemĂˇ potĹ™ebnĂ˝ level.');
+            return back()->with('error', 'Kolonie ještě nemá potřebný level.');
         }
         if (DB::table('user_building_slots')->where(['user_id' => $user->id, 'building_slot_id' => $slotId])->exists()) {
             return back();
         }
         if ($user->resources < $slot->cost_resources) {
-            return back()->with('error', 'NemĂˇĹˇ dost surovin.');
+            return back()->with('error', 'Nemáš dost surovin.');
         }
 
         $response = DB::transaction(function () use ($slot, $user) {
@@ -450,6 +461,7 @@ class GameController extends Controller
         if (! is_array($customizationConfig)) {
             $customizationConfig = [];
         }
+        $customizationConfig = $this->sanitizeCustomizationConfig($customizationConfig, $customizationAccess, $unlocks);
 
         return view('game.building', compact('building', 'tasks', 'progress', 'completed', 'unlocks', 'userUnlocks', 'customizationAccess', 'basicColorPalette', 'customization', 'customizationConfig'));
     }
@@ -469,7 +481,7 @@ class GameController extends Controller
         }
 
         if (! Hash::check(AnswerNormalizer::normalize($data['answer']), $task->answer_hash)) {
-            return back()->with('error', 'KĂłd zatĂ­m nesedĂ­.');
+            return back()->with('error', 'Kód zatím nesedí.');
         }
 
         DB::transaction(function () use ($task, $data) {
@@ -499,7 +511,7 @@ class GameController extends Controller
         });
         $this->awardBuildingTaskBadges($task);
 
-        return back()->with('success', 'SpeciĂˇlnĂ­ Ăşkol splnÄ›n.');
+        return back()->with('success', 'Speciální úkol splněn.');
     }
 
     public function saveCustomization(Request $request, int $buildingId): RedirectResponse
@@ -539,16 +551,32 @@ class GameController extends Controller
             if ($unlock->type === 'variant' && isset($data['variants'][$unlock->key])) {
                 $options = json_decode((string) $unlock->options, true);
                 $value = (string) $data['variants'][$unlock->key];
+                $access = $customizationAccess[$unlock->id] ?? ['allowed_values' => []];
                 $allowedValues = collect(is_array($options) ? $options : [])
                     ->map(fn ($option) => is_array($option) ? ($option['value'] ?? null) : $option)
                     ->filter()
                     ->all();
+                if (! empty($access['allowed_values'])) {
+                    $allowedValues = array_values(array_intersect($allowedValues, $access['allowed_values']));
+                }
                 if (in_array($value, $allowedValues, true)) {
                     $filtered['variants'][$unlock->key] = $value;
                 }
             }
             if ($unlock->type === 'pattern' && isset($data['patterns'][$unlock->key])) {
-                $filtered['patterns'][$unlock->key] = (string) $data['patterns'][$unlock->key];
+                $options = json_decode((string) $unlock->options, true);
+                $value = (string) $data['patterns'][$unlock->key];
+                $access = $customizationAccess[$unlock->id] ?? ['allowed_values' => []];
+                $allowedValues = collect(is_array($options) ? $options : [])
+                    ->map(fn ($option) => is_array($option) ? ($option['value'] ?? null) : $option)
+                    ->filter()
+                    ->all();
+                if (! empty($access['allowed_values'])) {
+                    $allowedValues = array_values(array_intersect($allowedValues, $access['allowed_values']));
+                }
+                if (in_array($value, $allowedValues, true)) {
+                    $filtered['patterns'][$unlock->key] = $value;
+                }
             }
         }
 
@@ -559,7 +587,7 @@ class GameController extends Controller
         DB::table('users')->where('id', $user->id)->update(['last_customization_change_at' => now()]);
         $this->audit('customization_changed', 'building', $buildingId, $user->id);
 
-        return back()->with('success', 'Vzhled uloĹľen.');
+        return back()->with('success', 'Vzhled uložen.');
     }
 
     private function customizationAccessForBuilding(int $userId, int $buildingId, $unlocks): array
@@ -592,19 +620,37 @@ class GameController extends Controller
                     $access[$unlock->id] = [
                         'mode' => $mode,
                         'palette' => $mode === 'basic' ? $this->basicColorPalette() : [],
+                        'allowed_values' => $this->allowedOptionValues($unlock, $mode),
                     ];
                 }
             }
         }
 
-        $directUnlocks = DB::table('user_customization_unlocks')
+        $directUnlockQuery = DB::table('user_customization_unlocks')
             ->where('user_id', $userId)
-            ->whereIn('customization_unlock_id', $unlocks->pluck('id'))
-            ->pluck('customization_unlock_id');
+            ->whereIn('customization_unlock_id', $unlocks->pluck('id'));
+
+        if (Schema::hasTable('building_task_customization_unlocks')) {
+            $taskLinkedUnlockIds = DB::table('building_task_customization_unlocks')
+                ->whereIn('customization_unlock_id', $unlocks->pluck('id'))
+                ->pluck('customization_unlock_id')
+                ->unique()
+                ->all();
+            if (! empty($taskLinkedUnlockIds)) {
+                $directUnlockQuery->whereNotIn('customization_unlock_id', $taskLinkedUnlockIds);
+            }
+        }
+
+        $directUnlocks = $directUnlockQuery->pluck('customization_unlock_id');
 
         foreach ($directUnlocks as $unlockId) {
             if (! isset($access[$unlockId])) {
-                $access[$unlockId] = ['mode' => 'full', 'palette' => []];
+                $unlock = $unlocksById[$unlockId] ?? null;
+                $access[$unlockId] = [
+                    'mode' => 'full',
+                    'palette' => [],
+                    'allowed_values' => $unlock ? $this->allowedOptionValues($unlock, 'full') : [],
+                ];
             }
         }
 
@@ -642,7 +688,90 @@ class GameController extends Controller
             return $sourceTaskOrder >= 2 ? 'full' : 'basic';
         }
 
+        if ($unlock->type === 'variant' && $unlock->key === '6__lustr' && $sourceSlug === 'remeslnik') {
+            return $sourceTaskOrder >= 2 ? 'full' : 'basic_lustr';
+        }
+
+        if ($unlock->type === 'variant' && $unlock->key === '3__jidlo' && $sourceSlug === 'kuchyn') {
+            return $sourceTaskOrder >= 2 ? 'full' : 'basic_food';
+        }
+
+        if ($unlock->type === 'pattern' && $unlock->key === '5__vzor-na-zdi' && $sourceSlug === 'obyvak') {
+            return $sourceTaskOrder >= 2 ? 'full' : 'basic_pattern';
+        }
+
         return 'full';
+    }
+
+    private function allowedOptionValues(object $unlock, string $mode): array
+    {
+        if (! in_array($unlock->type, ['variant', 'pattern'], true)) {
+            return [];
+        }
+
+        $options = json_decode((string) $unlock->options, true);
+        $values = collect(is_array($options) ? $options : [])
+            ->map(fn ($option) => is_array($option) ? ($option['value'] ?? null) : $option)
+            ->filter()
+            ->values()
+            ->all();
+
+        if ($unlock->key === '6__lustr' && $mode === 'basic_lustr') {
+            return ['__off', 'edit_variant__6__lustr__1', 'edit_variant__6__lustr__3'];
+        }
+
+        if ($unlock->key === '3__jidlo' && $mode === 'basic_food') {
+            return array_values(array_intersect($values, ['edit_variant__3__ovoce']));
+        }
+
+        if ($unlock->key === '5__vzor-na-zdi' && $mode === 'basic_pattern') {
+            $off = in_array('__off', $values, true) ? ['__off'] : [];
+            $editable = array_values(array_filter($values, fn ($value) => $value !== '__off'));
+            return array_merge($off, array_slice($editable, 0, (int) ceil(count($editable) / 2)));
+        }
+
+        return $values;
+    }
+
+    private function sanitizeCustomizationConfig(array $config, array $customizationAccess, $unlocks): array
+    {
+        $clean = ['colors' => [], 'patterns' => [], 'variants' => []];
+
+        foreach ($unlocks as $unlock) {
+            $access = $customizationAccess[$unlock->id] ?? null;
+            if (! $access) {
+                continue;
+            }
+
+            if ($unlock->type === 'color') {
+                $value = data_get($config, 'colors.' . $unlock->key);
+                if (! is_string($value)) {
+                    continue;
+                }
+
+                $paletteValues = collect($access['palette'] ?? [])->pluck('value')->all();
+                if (($access['mode'] ?? 'full') === 'basic' && in_array($value, $paletteValues, true)) {
+                    $clean['colors'][$unlock->key] = $value;
+                } elseif (($access['mode'] ?? 'full') === 'full' && preg_match('/^#[0-9a-fA-F]{6}$/', $value)) {
+                    $clean['colors'][$unlock->key] = $value;
+                }
+            }
+
+            if (in_array($unlock->type, ['variant', 'pattern'], true)) {
+                $bucket = $unlock->type === 'variant' ? 'variants' : 'patterns';
+                $value = data_get($config, $bucket . '.' . $unlock->key);
+                if (! is_string($value)) {
+                    continue;
+                }
+
+                $allowedValues = $access['allowed_values'] ?? $this->allowedOptionValues($unlock, $access['mode'] ?? 'full');
+                if (in_array($value, $allowedValues, true)) {
+                    $clean[$bucket][$unlock->key] = $value;
+                }
+            }
+        }
+
+        return $clean;
     }
 
     private function basicColorPalette(): array
@@ -1050,7 +1179,7 @@ class GameController extends Controller
     private function ensureAnthillUnlocked(): void
     {
         if (! $this->anthillUnlocked(Auth::id())) {
-            abort(403, 'ZatĂ­m jeĹˇtÄ› nemĂˇĹˇ vlastnĂ­ mraveniĹˇtÄ›. SpoleÄŤnÄ› s ostatnĂ­mi mravenci zatĂ­m pĹ™espĂˇvĂˇte na louce pod hvÄ›zdami.');
+            abort(403, 'Zatím ještě nemáš vlastní mraveniště. Společně s ostatními mravenci zatím přespáváte na louce pod hvězdami.');
         }
     }
 

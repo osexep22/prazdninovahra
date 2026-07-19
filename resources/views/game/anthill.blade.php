@@ -160,6 +160,11 @@
         .find(element => element.dataset.originalId === originalId);
     const findByOriginalPrefix = (root, originalPrefix) => Array.from(root.querySelectorAll('[data-original-id]'))
         .filter(element => element.dataset.originalId.startsWith(originalPrefix));
+    const hideOptionalSvgParts = (root) => {
+        Array.from(root.querySelectorAll('[data-original-id]'))
+            .filter(element => element.dataset.originalId.startsWith('edit_variant__') || element.dataset.originalId.startsWith('edit_pattern__'))
+            .forEach(target => target.style.display = 'none');
+    };
     const setSvgFill = (target, value) => {
         const paint = (element) => {
             element.setAttribute('fill', value);
@@ -229,6 +234,7 @@
             .then(svg => {
                 target.innerHTML = svg;
                 namespaceInlineSvgIds(target, `anthillRoom${index}__`);
+                hideOptionalSvgParts(target);
                 const colors = parseJsonData(target.dataset.colors);
                 Object.entries(colors).forEach(([key, value]) => {
                     target.style.setProperty(`--${key}`, value);
