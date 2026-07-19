@@ -160,6 +160,19 @@
         .find(element => element.dataset.originalId === originalId);
     const findByOriginalPrefix = (root, originalPrefix) => Array.from(root.querySelectorAll('[data-original-id]'))
         .filter(element => element.dataset.originalId.startsWith(originalPrefix));
+    const setSvgFill = (target, value) => {
+        const paint = (element) => {
+            element.setAttribute('fill', value);
+            element.style.fill = value;
+        };
+        paint(target);
+        target.querySelectorAll('*').forEach(element => {
+            const inlineStyle = element.getAttribute('style') || '';
+            if (element.hasAttribute('fill') || inlineStyle.includes('fill:')) {
+                paint(element);
+            }
+        });
+    };
     const namespaceInlineSvgIds = (root, prefix) => {
         const idMap = new Map();
         root.querySelectorAll('[id]').forEach(element => {
@@ -220,7 +233,7 @@
                 Object.entries(colors).forEach(([key, value]) => {
                     target.style.setProperty(`--${key}`, value);
                     const editTarget = findByOriginalId(target, 'edit_color__' + key);
-                    if (editTarget) editTarget.setAttribute('fill', value);
+                    if (editTarget) setSvgFill(editTarget, value);
                 });
                 const variants = parseJsonData(target.dataset.variants);
                 Object.entries(variants).forEach(([key, value]) => {

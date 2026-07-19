@@ -15,6 +15,8 @@ use Illuminate\View\View;
 
 class GameController extends Controller
 {
+    private const CUSTOMIZATION_DAILY_LIMIT = 1000;
+
     public function __construct(private readonly EconomyService $economy)
     {
     }
@@ -273,7 +275,15 @@ class GameController extends Controller
             return back()->with('error', 'NemĂˇĹˇ dost surovin.');
         }
 
-        DB::transaction(function () use ($slot, $user) {
+        $response = DB::transaction(function () use ($slot, $user) {
+            $lockedUser = DB::table('users')->where('id', $user->id)->lockForUpdate()->first();
+            if (DB::table('user_building_slots')->where(['user_id' => $user->id, 'building_slot_id' => $slot->id])->exists()) {
+                return back();
+            }
+            if ($lockedUser->resources < $slot->cost_resources) {
+                return back()->with('error', 'Nemáš dost surovin.');
+            }
+
             DB::table('users')->where('id', $user->id)->decrement('resources', $slot->cost_resources);
             DB::table('user_building_slots')->insert([
                 'user_id' => $user->id,
@@ -283,6 +293,9 @@ class GameController extends Controller
             ]);
             $this->audit('slot_purchased', 'building_slot', $slot->id, $user->id);
         });
+        if ($response) {
+            return $response;
+        }
 
         return back()->with('success', 'Slot koupen.');
     }
@@ -312,7 +325,24 @@ class GameController extends Controller
             return back()->with('error', 'Nemáš dost surovin na rozšíření mraveniště.');
         }
 
-        DB::transaction(function () use ($user, $rooms, $cost) {
+        $response = DB::transaction(function () use ($user, $rooms, $cost) {
+            $lockedUser = DB::table('users')->where('id', $user->id)->lockForUpdate()->first();
+            $capacity = $this->economy->anthillCapacity($user->id);
+            if ($rooms <= $capacity) {
+                return back();
+            }
+            if (! $this->economy->canBuyExpansion($capacity, $rooms)) {
+                $nextTarget = $this->economy->nextExpansionTarget($capacity);
+                $message = $nextTarget
+                    ? 'Mraveniště je potřeba rozšiřovat postupně. Teď můžeš rozšířit jen na ' . $nextTarget . ' komůrek.'
+                    : 'Mraveniště už má největší dostupné rozšíření.';
+
+                return back()->with('error', $message);
+            }
+            if ($lockedUser->resources < $cost) {
+                return back()->with('error', 'Nemáš dost surovin na rozšíření mraveniště.');
+            }
+
             DB::table('users')->where('id', $user->id)->decrement('resources', $cost);
             $this->economy->grantRooms($user->id, $rooms, $cost);
             $this->audit('anthill_expansion_purchased', 'anthill_expansion', $rooms, $user->id, [
@@ -320,6 +350,9 @@ class GameController extends Controller
                 'resources' => -$cost,
             ]);
         });
+        if ($response) {
+            return $response;
+        }
 
         return back()->with('success', 'Mraveniště rozšířeno na ' . $rooms . ' komůrek.');
     }
@@ -355,7 +388,21 @@ class GameController extends Controller
             return back()->with('error', 'Tahle komůrka už je obsazená jinou budovou.');
         }
 
-        DB::transaction(function () use ($user, $building, $data) {
+        $response = DB::transaction(function () use ($user, $building, $data) {
+            $lockedUser = DB::table('users')->where('id', $user->id)->lockForUpdate()->first();
+            if ($lockedUser->resources < $building->cost_resources) {
+                return back()->with('error', 'Budovu zatím nejde postavit. Stojí ' . $building->cost_resources . ' surovin, ale teď máš jen ' . $lockedUser->resources . '.');
+            }
+            if (DB::table('user_buildings')->where(['user_id' => $user->id, 'building_id' => $building->id])->exists()) {
+                return back()->with('error', 'Tento typ budovy už v mraveništi máš. Každý typ budovy lze postavit jen jednou.');
+            }
+            if (! DB::table('user_building_slots')->where(['user_id' => $user->id, 'building_slot_id' => $data['slot_id']])->exists()) {
+                return back()->with('error', 'Tahle komůrka ještě není koupená. Nejdřív ji otevři nebo rozšiř mraveniště.');
+            }
+            if (DB::table('user_buildings')->where(['user_id' => $user->id, 'building_slot_id' => $data['slot_id']])->exists()) {
+                return back()->with('error', 'Tahle komůrka už je obsazená jinou budovou.');
+            }
+
             DB::table('users')->where('id', $user->id)->decrement('resources', $building->cost_resources);
             DB::table('user_buildings')->insert([
                 'user_id' => $user->id,
@@ -366,6 +413,9 @@ class GameController extends Controller
             ]);
             $this->audit('building_built', 'building', $building->id, $user->id);
         });
+        if ($response) {
+            return $response;
+        }
         $buildingCount = DB::table('user_buildings')->where('user_id', $user->id)->count();
         if ($buildingCount >= 1) {
             $this->awardBadge('prvni-budova', $user->id, 'building', $building->id);
@@ -392,14 +442,16 @@ class GameController extends Controller
         $progress = DB::table('user_building_task_progress')->where('user_id', Auth::id())->pluck('status', 'building_task_id');
         $completed = $progress->filter(fn ($status) => $status === 'completed')->count();
         $unlocks = DB::table('customization_unlocks')->where('building_id', $building->id)->get();
-        $userUnlocks = DB::table('user_customization_unlocks')->where('user_id', Auth::id())->pluck('customization_unlock_id')->all();
+        $customizationAccess = $this->customizationAccessForBuilding(Auth::id(), $building->id, $unlocks);
+        $userUnlocks = array_keys($customizationAccess);
+        $basicColorPalette = $this->basicColorPalette();
         $customization = DB::table('user_building_customizations')->where(['user_id' => Auth::id(), 'building_id' => $building->id])->first();
         $customizationConfig = $customization ? json_decode((string) $customization->config_json, true) : [];
         if (! is_array($customizationConfig)) {
             $customizationConfig = [];
         }
 
-        return view('game.building', compact('building', 'tasks', 'progress', 'completed', 'unlocks', 'userUnlocks', 'customization', 'customizationConfig'));
+        return view('game.building', compact('building', 'tasks', 'progress', 'completed', 'unlocks', 'userUnlocks', 'customizationAccess', 'basicColorPalette', 'customization', 'customizationConfig'));
     }
 
     public function submitBuildingTask(Request $request, int $taskId): RedirectResponse
@@ -460,8 +512,8 @@ class GameController extends Controller
             ->where('action', 'customization_changed')
             ->where('created_at', '>=', now()->startOfDay())
             ->count();
-        if ($changesToday >= 3) {
-            return back()->with('error', 'Vzhled lze mÄ›nit maximĂˇlnÄ› 3x dennÄ›.');
+        if ($changesToday >= self::CUSTOMIZATION_DAILY_LIMIT) {
+            return back()->with('error', 'Vzhled lze měnit maximálně ' . self::CUSTOMIZATION_DAILY_LIMIT . 'x denně.');
         }
 
         $data = $request->validate([
@@ -470,16 +522,17 @@ class GameController extends Controller
             'variants' => ['array'],
         ]);
         $unlocks = DB::table('customization_unlocks')->where('building_id', $buildingId)->get();
-        $userUnlocks = DB::table('user_customization_unlocks')
-            ->where('user_id', $user->id)
-            ->whereIn('customization_unlock_id', $unlocks->pluck('id'))
-            ->pluck('customization_unlock_id')
-            ->all();
+        $customizationAccess = $this->customizationAccessForBuilding($user->id, $buildingId, $unlocks);
+        $userUnlocks = array_keys($customizationAccess);
         $filtered = ['colors' => [], 'patterns' => [], 'variants' => []];
         foreach ($unlocks->whereIn('id', $userUnlocks) as $unlock) {
             if ($unlock->type === 'color' && isset($data['colors'][$unlock->key])) {
                 $value = (string) $data['colors'][$unlock->key];
-                if (preg_match('/^#[0-9a-fA-F]{6}$/', $value)) {
+                $access = $customizationAccess[$unlock->id] ?? ['mode' => 'full'];
+                $allowedBasicColors = collect($access['palette'] ?? [])->pluck('value')->all();
+                if (($access['mode'] ?? 'full') === 'basic' && in_array($value, $allowedBasicColors, true)) {
+                    $filtered['colors'][$unlock->key] = $value;
+                } elseif (($access['mode'] ?? 'full') === 'full' && preg_match('/^#[0-9a-fA-F]{6}$/', $value)) {
                     $filtered['colors'][$unlock->key] = $value;
                 }
             }
@@ -507,6 +560,99 @@ class GameController extends Controller
         $this->audit('customization_changed', 'building', $buildingId, $user->id);
 
         return back()->with('success', 'Vzhled uloĹľen.');
+    }
+
+    private function customizationAccessForBuilding(int $userId, int $buildingId, $unlocks): array
+    {
+        $this->syncCustomizationUnlocksFromCompletedTasks($userId);
+
+        $unlocksById = $unlocks->keyBy('id');
+        $access = [];
+
+        if (Schema::hasTable('building_task_customization_unlocks')) {
+            $completedLinks = DB::table('user_building_task_progress as progress')
+                ->join('building_task_customization_unlocks as links', 'links.building_task_id', '=', 'progress.building_task_id')
+                ->join('customization_unlocks as unlocks', 'unlocks.id', '=', 'links.customization_unlock_id')
+                ->join('building_tasks as tasks', 'tasks.id', '=', 'progress.building_task_id')
+                ->join('buildings as source_buildings', 'source_buildings.id', '=', 'tasks.building_id')
+                ->where('progress.user_id', $userId)
+                ->where('progress.status', 'completed')
+                ->where('unlocks.building_id', $buildingId)
+                ->select('links.customization_unlock_id', 'source_buildings.slug as source_slug', 'tasks.sort_order')
+                ->get();
+
+            foreach ($completedLinks as $link) {
+                $unlock = $unlocksById[$link->customization_unlock_id] ?? null;
+                if (! $unlock) {
+                    continue;
+                }
+
+                $mode = $this->customizationUnlockMode($unlock, $link->source_slug, (int) $link->sort_order);
+                if (($access[$unlock->id]['mode'] ?? null) !== 'full') {
+                    $access[$unlock->id] = [
+                        'mode' => $mode,
+                        'palette' => $mode === 'basic' ? $this->basicColorPalette() : [],
+                    ];
+                }
+            }
+        }
+
+        $directUnlocks = DB::table('user_customization_unlocks')
+            ->where('user_id', $userId)
+            ->whereIn('customization_unlock_id', $unlocks->pluck('id'))
+            ->pluck('customization_unlock_id');
+
+        foreach ($directUnlocks as $unlockId) {
+            if (! isset($access[$unlockId])) {
+                $access[$unlockId] = ['mode' => 'full', 'palette' => []];
+            }
+        }
+
+        return $access;
+    }
+
+    private function syncCustomizationUnlocksFromCompletedTasks(int $userId): void
+    {
+        if (! Schema::hasTable('building_task_customization_unlocks')) {
+            return;
+        }
+
+        $unlockIds = DB::table('user_building_task_progress as progress')
+            ->join('building_task_customization_unlocks as links', 'links.building_task_id', '=', 'progress.building_task_id')
+            ->where('progress.user_id', $userId)
+            ->where('progress.status', 'completed')
+            ->pluck('links.customization_unlock_id')
+            ->unique();
+
+        foreach ($unlockIds as $unlockId) {
+            DB::table('user_customization_unlocks')->updateOrInsert(
+                ['user_id' => $userId, 'customization_unlock_id' => $unlockId],
+                ['unlocked_at' => now()]
+            );
+        }
+    }
+
+    private function customizationUnlockMode(object $unlock, string $sourceSlug, int $sourceTaskOrder): string
+    {
+        if ($unlock->type === 'color' && in_array($unlock->key, ['4__stena', '4__stena_komory'], true) && $sourceSlug === 'malir') {
+            return $sourceTaskOrder >= 2 ? 'full' : 'basic';
+        }
+
+        if ($unlock->type === 'color' && $unlock->key === '2__koberec' && $sourceSlug === 'krejci') {
+            return $sourceTaskOrder >= 2 ? 'full' : 'basic';
+        }
+
+        return 'full';
+    }
+
+    private function basicColorPalette(): array
+    {
+        return [
+            ['value' => '#8b5a2b', 'label' => 'Hnědá'],
+            ['value' => '#6f9f4a', 'label' => 'Mechová zelená'],
+            ['value' => '#f0c64a', 'label' => 'Sluneční žlutá'],
+            ['value' => '#4ca3d9', 'label' => 'Potůčková modrá'],
+        ];
     }
 
     public function leaderboard(): View
@@ -945,7 +1091,3 @@ class GameController extends Controller
             ->first();
     }
 }
-
-
-
-

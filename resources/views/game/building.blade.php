@@ -86,6 +86,9 @@
                         @foreach($unlocked as $unlock)
                             @php
                                 $savedColor = data_get($customizationConfig, 'colors.' . $unlock->key);
+                                $access = $customizationAccess[$unlock->id] ?? ['mode' => 'full', 'palette' => []];
+                                $palette = collect($access['palette'] ?? []);
+                                $defaultPaletteColor = $palette->first()['value'] ?? '#ffffff';
                                 $options = collect(json_decode($unlock->options, true) ?? [])->map(function ($option) {
                                     return is_array($option)
                                         ? ['value' => $option['value'] ?? '', 'label' => $option['label'] ?? ($option['value'] ?? '')]
@@ -95,7 +98,16 @@
                             <div>
                                 <label>{{ $unlock->label }}</label>
                                 @if($unlock->type === 'color')
-                                    <input class="custom-control" data-kind="color" data-key="{{ $unlock->key }}" data-saved="{{ $savedColor ? '1' : '0' }}" type="color" name="colors[{{ $unlock->key }}]" value="{{ $savedColor ?: '#ffffff' }}">
+                                    @if(($access['mode'] ?? 'full') === 'basic' && $palette->isNotEmpty())
+                                        <select class="custom-control" data-kind="color" data-key="{{ $unlock->key }}" data-saved="1" data-apply-default="1" name="colors[{{ $unlock->key }}]">
+                                            @foreach($palette as $color)
+                                                <option value="{{ $color['value'] }}" @selected(($savedColor ?: $defaultPaletteColor) === $color['value'])>{{ $color['label'] }}</option>
+                                            @endforeach
+                                        </select>
+                                        <p class="small muted">Další odstíny odemkne druhý úkol.</p>
+                                    @else
+                                        <input class="custom-control" data-kind="color" data-key="{{ $unlock->key }}" data-saved="{{ $savedColor ? '1' : '0' }}" type="color" name="colors[{{ $unlock->key }}]" value="{{ $savedColor ?: '#ffffff' }}">
+                                    @endif
                                 @elseif($unlock->type === 'variant')
                                     <select class="custom-control" data-kind="variant" data-key="{{ $unlock->key }}" name="variants[{{ $unlock->key }}]">
                                         @foreach($options as $option)
@@ -122,15 +134,28 @@
 
 <script>
     const preview = document.getElementById('svg-preview');
+    const setSvgFill = (target, value) => {
+        const paint = (element) => {
+            element.setAttribute('fill', value);
+            element.style.fill = value;
+        };
+        paint(target);
+        target.querySelectorAll('*').forEach(element => {
+            const inlineStyle = element.getAttribute('style') || '';
+            if (element.hasAttribute('fill') || inlineStyle.includes('fill:')) {
+                paint(element);
+            }
+        });
+    };
     const applyCustomization = () => {
         document.querySelectorAll('.custom-control').forEach(control => {
             const kind = control.dataset.kind;
             const key = control.dataset.key;
             if (kind === 'color') {
-                if (control.dataset.saved === '1' || control.dataset.dirty === '1') {
+                if (control.dataset.saved === '1' || control.dataset.dirty === '1' || control.dataset.applyDefault === '1') {
                     preview.style.setProperty(`--${key}`, control.value);
                     const target = preview.querySelector('#edit_color__' + CSS.escape(key));
-                    if (target) target.setAttribute('fill', control.value);
+                    if (target) setSvgFill(target, control.value);
                 }
             }
             if (kind === 'variant') {
