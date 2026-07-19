@@ -778,6 +778,10 @@ class GameController extends Controller
             ->values()
             ->all();
 
+        if ($unlock->type === 'variant' && count($values) === 1 && ! in_array('__off', $values, true)) {
+            array_unshift($values, '__off');
+        }
+
         if ($unlock->key === '6__lustr' && $mode === 'basic_lustr') {
             return ['__off', 'edit_variant__6__lustr__1', 'edit_variant__6__lustr__3'];
         }

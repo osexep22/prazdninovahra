@@ -11,10 +11,19 @@
     .customization-list { display:grid; gap:12px; max-width:620px; }
     .customization-control-row { border:1px solid var(--line); border-radius:8px; background:#fbfdff; padding:12px; }
     .customization-control-row[hidden] { display:none !important; }
-    .color-picker-row { display:flex; align-items:center; gap:10px; }
-    .color-picker-row input[type="color"], .color-picker-row select { flex:1; min-width:0; }
-    .color-swatch { width:74px; height:34px; border-radius:7px; border:2px solid rgba(23,32,51,.22); box-shadow:inset 0 0 0 1px rgba(255,255,255,.42), 0 5px 12px rgba(23,32,51,.12); background:var(--swatch-color, #ffffff); }
-    .color-value { min-width:78px; color:var(--muted); font-size:13px; font-weight:800; font-variant-numeric:tabular-nums; }
+    .customization-form-grid { display:grid; gap:12px; max-width:620px; }
+    .color-picker-row { display:flex; align-items:center; gap:10px; min-height:42px; }
+    .color-picker-button { position:relative; display:inline-flex; align-items:center; cursor:pointer; }
+    .color-picker-button input[type="color"], .color-picker-button select {
+        position:absolute;
+        inset:0;
+        width:100%;
+        height:100%;
+        opacity:0;
+        cursor:pointer;
+    }
+    .color-swatch { width:82px; height:38px; border-radius:8px; border:2px solid rgba(23,32,51,.24); box-shadow:inset 0 0 0 1px rgba(255,255,255,.48), 0 5px 12px rgba(23,32,51,.12); background:var(--swatch-color, #ffffff); }
+    .color-picker-button:focus-within .color-swatch { outline:3px solid rgba(45,126,84,.25); outline-offset:2px; }
 </style>
 
 <div class="building-detail-shell">
@@ -91,7 +100,7 @@
                 @else
                 <form method="post" action="/buildings/{{ $building->id }}/customization">
                     @csrf
-                    <div class="grid">
+                    <div class="customization-form-grid">
                         @foreach($unlocked as $unlock)
                             @php
                                 $savedColor = data_get($customizationConfig, 'colors.' . $unlock->key);
@@ -112,26 +121,31 @@
                                 if (!empty($access['allowed_values'])) {
                                     $options = $options->whereIn('value', $access['allowed_values'])->values();
                                 }
+                                if ($unlock->type === 'variant' && $options->count() === 1 && $options->first()['value'] !== '__off') {
+                                    $options = collect([['value' => '__off', 'label' => 'Vypnuto']])->merge($options)->values();
+                                }
                             @endphp
                             <div class="customization-control-row" @if($dependsOnVariantKey) data-depends-variant-key="{{ $dependsOnVariantKey }}" data-depends-variant-value="{{ $dependsOnVariantValue }}" @endif>
                                 <label>{{ $unlock->label }}</label>
                                 @if($unlock->type === 'color')
                                     @if(($access['mode'] ?? 'full') === 'basic' && $palette->isNotEmpty())
                                         <div class="color-picker-row">
-                                            <select class="custom-control" data-kind="color" data-key="{{ $unlock->key }}" data-saved="1" data-apply-default="1" name="colors[{{ $unlock->key }}]">
-                                                @foreach($palette as $color)
-                                                    <option value="{{ $color['value'] }}" @selected(($savedColor ?: $defaultPaletteColor) === $color['value'])>{{ $color['label'] }}</option>
-                                                @endforeach
-                                            </select>
-                                            <span class="color-swatch" style="--swatch-color: {{ $savedColor ?: $defaultPaletteColor }}"></span>
-                                            <span class="color-value">{{ $savedColor ?: $defaultPaletteColor }}</span>
+                                            <span class="color-picker-button" title="Změnit barvu">
+                                                <span class="color-swatch" style="--swatch-color: {{ $savedColor ?: $defaultPaletteColor }}"></span>
+                                                <select class="custom-control" data-kind="color" data-key="{{ $unlock->key }}" data-saved="1" data-apply-default="1" name="colors[{{ $unlock->key }}]" aria-label="{{ $unlock->label }}">
+                                                    @foreach($palette as $color)
+                                                        <option value="{{ $color['value'] }}" @selected(($savedColor ?: $defaultPaletteColor) === $color['value'])>{{ $color['label'] }}</option>
+                                                    @endforeach
+                                                </select>
+                                            </span>
                                         </div>
                                         <p class="small muted">Další odstíny odemkne druhý úkol.</p>
                                     @else
                                         <div class="color-picker-row">
-                                            <input class="custom-control" data-kind="color" data-key="{{ $unlock->key }}" data-saved="{{ $savedColor ? '1' : '0' }}" type="color" name="colors[{{ $unlock->key }}]" value="{{ $savedColor ?: '#ffffff' }}">
-                                            <span class="color-swatch" style="--swatch-color: {{ $savedColor ?: '#ffffff' }}"></span>
-                                            <span class="color-value">{{ $savedColor ?: '#ffffff' }}</span>
+                                            <span class="color-picker-button" title="Změnit barvu">
+                                                <span class="color-swatch" style="--swatch-color: {{ $savedColor ?: '#ffffff' }}"></span>
+                                                <input class="custom-control" data-kind="color" data-key="{{ $unlock->key }}" data-saved="{{ $savedColor ? '1' : '0' }}" type="color" name="colors[{{ $unlock->key }}]" value="{{ $savedColor ?: '#ffffff' }}" aria-label="{{ $unlock->label }}">
+                                            </span>
                                         </div>
                                     @endif
                                 @elseif($unlock->type === 'variant')
@@ -209,8 +223,6 @@
         const row = control.closest('.color-picker-row');
         if (!row) return;
         row.querySelector('.color-swatch')?.style.setProperty('--swatch-color', control.value);
-        const value = row.querySelector('.color-value');
-        if (value) value.textContent = control.value;
     };
     const syncInitialColorControls = () => {
         document.querySelectorAll('.custom-control[data-kind="color"]').forEach(control => {

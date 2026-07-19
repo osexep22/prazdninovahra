@@ -220,6 +220,7 @@ return new class extends Migration
             ['kuchyn', 2, 'variant', ['3__jidlo', '3__voda']],
             ['kuchyn', 2, 'color', ['3__stul', '3__hrnec']],
             ['porodnice', 1, 'variant', ['9__otevreno']],
+            ['malir', 1, 'variant', ['4__obraz']],
             ['hospoda', 1, 'variant', ['3__pivo']],
             ['hospoda', 2, 'variant', ['3__voda']],
             ['zahradnik', 1, 'variant', ['8__kytka']],
