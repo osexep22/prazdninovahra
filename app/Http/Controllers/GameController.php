@@ -467,6 +467,7 @@ class GameController extends Controller
             ->orderBy('sort_order')
             ->get();
         $progress = DB::table('user_building_task_progress')->where('user_id', Auth::id())->pluck('status', 'building_task_id');
+        $tasks = $this->visibleBuildingTasks($tasks, $progress);
         $completed = $progress->filter(fn ($status) => $status === 'completed')->count();
         $unlocks = DB::table('customization_unlocks')->where('building_id', $building->id)->get();
         $customizationAccess = $this->customizationAccessForBuilding(Auth::id(), $building->id, $unlocks);
@@ -482,10 +483,49 @@ class GameController extends Controller
         return view('game.building', compact('building', 'tasks', 'progress', 'completed', 'unlocks', 'userUnlocks', 'customizationAccess', 'basicColorPalette', 'customization', 'customizationConfig'));
     }
 
+    private function visibleBuildingTasks($tasks, $progress)
+    {
+        $visibleTasks = collect();
+
+        foreach ($tasks as $task) {
+            $visibleTasks->push($task);
+
+            if (($progress[$task->id] ?? null) !== 'completed') {
+                break;
+            }
+        }
+
+        return $visibleTasks;
+    }
+
+    private function previousBuildingTasksCompleted(int $userId, object $task): bool
+    {
+        $previousTaskIds = DB::table('building_tasks')
+            ->where('building_id', $task->building_id)
+            ->where('sort_order', '<', $task->sort_order)
+            ->when(Schema::hasColumn('building_tasks', 'is_active'), fn ($query) => $query->where('is_active', true))
+            ->pluck('id');
+
+        if ($previousTaskIds->isEmpty()) {
+            return true;
+        }
+
+        $completedPreviousTasks = DB::table('user_building_task_progress')
+            ->where('user_id', $userId)
+            ->whereIn('building_task_id', $previousTaskIds)
+            ->where('status', 'completed')
+            ->count();
+
+        return $completedPreviousTasks === $previousTaskIds->count();
+    }
+
     public function submitBuildingTask(Request $request, int $taskId): RedirectResponse
     {
         $task = DB::table('building_tasks')->find($taskId);
         abort_unless($task, 404);
+        if (Schema::hasColumn('building_tasks', 'is_active') && ! $task->is_active) {
+            abort(404);
+        }
         abort_unless(DB::table('user_buildings')->where(['user_id' => Auth::id(), 'building_id' => $task->building_id])->exists(), 403);
         $data = $request->validate(['answer' => ['required', 'string', 'max:2000']]);
 
@@ -494,6 +534,10 @@ class GameController extends Controller
             ->exists();
         if ($alreadyCompleted) {
             return back()->with('success', 'Úkol už máš splněný.');
+        }
+
+        if (! $this->previousBuildingTasksCompleted(Auth::id(), $task)) {
+            return back()->with('error', 'Nejdřív splň předchozí úkol této místnosti.');
         }
 
         if (! Hash::check(AnswerNormalizer::normalize($data['answer']), $task->answer_hash)) {
