@@ -41,7 +41,7 @@ class AppServiceProvider extends ServiceProvider
             $totalQueryTime = array_sum(array_column($queries, 'time_ms'));
             usort($queries, fn (array $a, array $b) => $b['time_ms'] <=> $a['time_ms']);
 
-            Log::info('perf_log request', [
+            Log::warning('perf_log request', [
                 'method' => request()->method(),
                 'path' => request()->path(),
                 'duration_ms' => round((microtime(true) - $startedAt) * 1000, 2),
