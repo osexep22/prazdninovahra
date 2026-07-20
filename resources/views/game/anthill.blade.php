@@ -155,9 +155,7 @@
             return {};
         }
     };
-    const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const findByOriginalId = (root, originalId) => Array.from(root.querySelectorAll('[data-original-id]'))
-        .find(element => element.dataset.originalId === originalId);
+    const findByOriginalId = (root, originalId) => root.originalIdMap?.get(originalId) || null;
     const findByOriginalPrefix = (root, originalPrefix) => Array.from(root.querySelectorAll('[data-original-id]'))
         .filter(element => element.dataset.originalId.startsWith(originalPrefix));
     const hideOptionalSvgParts = (root) => {
@@ -194,21 +192,26 @@
             element.id = idMap.get(element.dataset.originalId);
         });
 
-        const ids = Array.from(idMap.keys()).sort((a, b) => b.length - a.length);
+        const replaceReferences = (value) => {
+            let nextValue = value.replace(/url\((["']?)#([^)"']+)\1\)/g, (match, quote, originalId) => {
+                const namespacedId = idMap.get(originalId);
+                return namespacedId ? `url(${quote}#${namespacedId}${quote})` : match;
+            });
+
+            if (nextValue.startsWith('#')) {
+                const namespacedId = idMap.get(nextValue.slice(1));
+                if (namespacedId) {
+                    nextValue = `#${namespacedId}`;
+                }
+            }
+
+            return nextValue;
+        };
+
         root.querySelectorAll('*').forEach(element => {
             Array.from(element.attributes).forEach(attribute => {
                 if (attribute.name === 'id' || attribute.name === 'data-original-id') return;
-                let value = attribute.value;
-                ids.forEach(originalId => {
-                    const namespacedId = idMap.get(originalId);
-                    value = value.replace(
-                        new RegExp(`url\\((["']?)#${escapeRegExp(originalId)}\\1\\)`, 'g'),
-                        `url($1#${namespacedId}$1)`
-                    );
-                    if (value === `#${originalId}`) {
-                        value = `#${namespacedId}`;
-                    }
-                });
+                const value = replaceReferences(attribute.value);
                 if (value !== attribute.value) {
                     element.setAttribute(attribute.name, value);
                 }
@@ -216,16 +219,11 @@
         });
 
         root.querySelectorAll('style').forEach(style => {
-            let css = style.textContent;
-            ids.forEach(originalId => {
-                const namespacedId = idMap.get(originalId);
-                css = css.replace(
-                    new RegExp(`url\\((["']?)#${escapeRegExp(originalId)}\\1\\)`, 'g'),
-                    `url($1#${namespacedId}$1)`
-                );
-            });
-            style.textContent = css;
+            style.textContent = replaceReferences(style.textContent);
         });
+
+        root.originalIdMap = new Map(Array.from(root.querySelectorAll('[data-original-id]'))
+            .map(element => [element.dataset.originalId, element]));
     };
 
     document.querySelectorAll('.room-svg').forEach((target, index) => {
