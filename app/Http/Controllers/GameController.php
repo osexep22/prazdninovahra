@@ -653,15 +653,11 @@ class GameController extends Controller
 
     private function customizationAccessForBuilding(int $userId, int $buildingId, $unlocks): array
     {
-        $this->syncCustomizationUnlocksFromCompletedTasks($userId);
-
         return $this->buildCustomizationAccessForUnlocks($userId, $buildingId, $unlocks);
     }
 
     private function customizationAccessForBuildings(int $userId, $unlocksByBuilding): array
     {
-        $this->syncCustomizationUnlocksFromCompletedTasks($userId);
-
         $access = [];
         foreach ($unlocksByBuilding as $buildingId => $unlocks) {
             $access[$buildingId] = $this->buildCustomizationAccessForUnlocks($userId, (int) $buildingId, $unlocks);
